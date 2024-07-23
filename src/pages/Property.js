@@ -20,6 +20,8 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import NewPropertyForm from './NewPropertyForm';
 import NewWorkRecord from './NewWorkRecord';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 
 
@@ -59,7 +61,17 @@ const Property = ({ username, authToken }) => {
     const [refreshData, setRefreshData] = useState(false);
     const [zoomOpen, setZoomOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [zoomLevel, setZoomLevel] = useState(1);
 
+    const zoomIn = (event) => {
+        event.stopPropagation(); // Prevent click event from propagating to the dialog
+        setZoomLevel(zoomLevel + 0.1); // Increase zoom level by 0.1
+    };
+
+    const zoomOut = (event) => {
+        event.stopPropagation(); // Prevent click event from propagating to the dialog
+        setZoomLevel(zoomLevel - 0.1); // Decrease zoom level by 0.1
+    };
 
     const StyledTableCell = withStyles((theme) => ({
         head: {
@@ -178,6 +190,42 @@ const Property = ({ username, authToken }) => {
     const propertyDetails = property[0].property;
     const workOrders = property[0].work_orders;
 
+    const exportWorkOrdersToPDF = (workOrder) => {
+        console.log("Exporting work orders:", workOrder); // Debugging log to inspect workOrders
+
+        const doc = new jsPDF();
+
+        doc.setFontSize(18);
+        doc.text(`Work Order for ${propertyDetails.property_name}`, 70, 22);
+        doc.setFontSize(11);
+        doc.text(`Order ID: ${workOrder.work_order_id}`, 14, 30);
+        doc.text(`Assigned Date: ${new Date(workOrder.assigned_date).toLocaleDateString()}`, 14, 38);
+        doc.text(`Assigned To: ${workOrder.user_full_name} (${workOrder.user_role})`, 14, 46);
+        doc.text(`Paid Out Tons: ${workOrder.paid_out}`, 144, 30);
+        doc.text(`Total Earnings: ${workOrder.total_earnings}`, 144, 38);
+        doc.text(`Total Work Done in Tons: ${workOrder.total_work_done}`, 144, 46);
+        const tableColumn = ["Record ID", "Work Done (tons)", "Created At"];
+        const tableRows = [];
+
+        workOrder.work_records.forEach(record => {
+            if (record.is_verified && record.work_done_tons >= 0) {
+                const recordData = [
+                    record.record_id,
+                    record.work_done_tons,
+                    new Date(record.created_at).toLocaleDateString(),
+                ];
+                tableRows.push(recordData);
+            }
+
+        });
+
+        doc.autoTable(tableColumn, tableRows, { startY: 54 });
+
+        doc.save(`work_order_${workOrder.work_order_id}.pdf`);
+
+    };
+
+
     return (
         <Layout username={username}>
             <Card>
@@ -250,6 +298,8 @@ const Property = ({ username, authToken }) => {
                                 <StyledTableCell>Update Date</StyledTableCell>
                                 <StyledTableCell>Group Name</StyledTableCell>
                                 <StyledTableCell>Group Type</StyledTableCell>
+                                <StyledTableCell>Action</StyledTableCell>
+
 
                             </TableRow>
                         </TableHead>
@@ -274,6 +324,7 @@ const Property = ({ username, authToken }) => {
                                         <TableCell >{new Date(workOrder.update_date).toLocaleDateString()}</TableCell>
                                         <TableCell >{workOrder.user_full_name}</TableCell>
                                         <TableCell >{workOrder.user_role}</TableCell>
+                                        <TableCell ><button onClick={() => exportWorkOrdersToPDF(workOrder,propertyDetails)}>Export to PDF</button></TableCell>
 
                                     </TableRow>
                                     <TableRow>
@@ -311,9 +362,23 @@ const Property = ({ username, authToken }) => {
                                                                         />
                                                                     </TableCell>
 
-                                                                    <Dialog open={zoomOpen} onClose={handleImageClose}>
-                                                                        <img src={selectedImage} alt="Zoomed Proof of Work" style={{ maxWidth: '300%', maxHeight: '300%' }} />
-                                                                    </Dialog>
+                                                                    <Dialog open={zoomOpen} onClose={handleImageClose} maxWidth="lg" fullWidth>
+                                            <DialogContent style={{ overflowY: 'auto', overflowX: 'auto', backgroundColor: 'black' }}> {/* Allow scrolling if necessary */}
+                                                <div style={{ display: 'flex', justifyContent: 'center', overflow: 'hidden' }}> {/* Center the image without forcing overflow */}
+                                                    <img src={selectedImage} alt="Zoomed Proof of Work" style={{
+                                                        transform: `scale(${zoomLevel})`,
+                                                        transformOrigin: 'center',
+                                                        maxWidth: '90vw', // Use viewport width to limit image width
+                                                        maxHeight: '90vh', // Use viewport height to limit image height
+                                                    }} />
+                                                </div>
+                                            </DialogContent>
+                                            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+                                                <button onClick={(event) => zoomIn(event)}>Zoom In</button>
+                                                <button onClick={(event) => zoomOut(event)}>Zoom Out</button>
+                                            </div>
+                                        </Dialog>
+
 
                                                                     <TableCell>{new Date(record.update_date).toLocaleDateString()}</TableCell>
                                                                     <TableCell>

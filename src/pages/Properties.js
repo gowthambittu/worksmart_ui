@@ -36,7 +36,7 @@ const useStyles = makeStyles((theme) => ({
 
 const Properties = ({ username,authToken }) => {
     const [data, setData] = useState([]);
-    const [filters, setFilters] = useState({ property_name: '', location: '', created_at: '' });
+    const [filters, setFilters] = useState({ property_id:'',property_name: '', location: '', created_at: '' });
     const [sort, setSort] = useState(null);
     const [sortOrder, setSortOrder] = useState('asc');
     const [page, setPage] = useState(0);
@@ -91,10 +91,28 @@ const Properties = ({ username,authToken }) => {
 
     let filteredData = data;
     Object.keys(filters).forEach((key) => {
-        filteredData = filteredData.filter(item => item[key].toLowerCase().includes(filters[key].toLowerCase()));
+        filteredData = filteredData.filter(item => {
+            // Convert item[key] to string if it's not already a string, to safely call toLowerCase
+            const itemValue = String(item[key]).toLowerCase();
+            const filterValue = String(filters[key]).toLowerCase();
+            return itemValue.includes(filterValue);
+        });
     });
     if (sort) {
-        filteredData = filteredData.sort((a, b) => (sortOrder === 'asc' ? a[sort].localeCompare(b[sort]) : b[sort].localeCompare(a[sort])));
+        filteredData = filteredData.sort((a, b) => {
+            const aValue = a[sort];
+            const bValue = b[sort];
+          
+            // Check if the values are numbers
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+              return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+            }
+          
+            // Assume the values are strings if not numbers
+            return sortOrder === 'asc' ? 
+                   aValue.toString().localeCompare(bValue.toString()) : 
+                   bValue.toString().localeCompare(aValue.toString());
+          });
     }
 
 

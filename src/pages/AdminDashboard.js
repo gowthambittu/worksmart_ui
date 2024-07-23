@@ -3,8 +3,12 @@ import Layout from './Layout';
 import { Typography, List, ListItem, ListItemText } from '@material-ui/core';
 
 
+const AdminDashboard = ({ username, authToken,handleAfterLogin }) => {
 
-const AdminDashboard = ({ username, authToken }) => {
+  useEffect(()=>{
+    handleAfterLogin(true);
+  })
+
     const menuItems = ['Properties', 'Outbound', 'User Management']; // Define menuItems here
     return (
   
