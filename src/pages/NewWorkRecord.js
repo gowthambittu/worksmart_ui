@@ -1,32 +1,32 @@
 import React, { useState } from 'react';
 import { Button, TextField, Box } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+// import { makeStyles } from '@material-ui/core/styles';
 import { format } from 'date-fns';
 import API_HOST from '../config';
 import { Snackbar } from '@material-ui/core';
 
-const useStyles = makeStyles((theme) => ({
-    paper: {
-        margin: theme.spacing(8, 4),
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-    },
-    form: {
-        width: '100%',
-        marginTop: theme.spacing(1),
-    },
-    submit: {
-        margin: theme.spacing(3, 0, 2),
-    },
-}));
+// const useStyles = makeStyles((theme) => ({
+//     paper: {
+//         margin: theme.spacing(8, 4),
+//         display: 'flex',
+//         flexDirection: 'column',
+//         alignItems: 'center',
+//     },
+//     form: {
+//         width: '100%',
+//         marginTop: theme.spacing(1),
+//     },
+//     submit: {
+//         margin: theme.spacing(3, 0, 2),
+//     },
+// }));
 
 function NewWorkRecord({token, workorderId}) {
-    const classes = useStyles();
+    // const classes = useStyles();
     const [workDone, setWorkDone] = useState('');
     const [proofOfWork, setProofOfWork] = useState(null);
     const [workDate, setWorkDate] = useState('');
-    const [isSuccess, setIsSuccess] = useState(false);
+    // const [isSuccess, setIsSuccess] = useState(false);
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
     const handleSnackbarClose = (event, reason) => {
@@ -56,7 +56,7 @@ function NewWorkRecord({token, workorderId}) {
         })
         .then(response => {
             if (response.ok) {
-                setIsSuccess(true);
+                // setIsSuccess(true);
                 setOpenSnackbar(true); // Open the snackbar
                 // Clear the state variables
                 setWorkDone('');

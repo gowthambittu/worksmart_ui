@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Button, TextField, Grid, Paper, Typography } from '@material-ui/core';
 import API_HOST from '../config';
-import { green } from '@material-ui/core/colors';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { useEffect } from 'react';
 import { Select, MenuItem } from '@material-ui/core';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -26,7 +25,7 @@ const NewPropertyForm = ({ token }) => {
         cost_to_driver: '',
     });
 
-    const [isSuccess, setIsSuccess] = useState(false);
+    // const [isSuccess, setIsSuccess] = useState(false);
     const [users, setUsers] = useState([]);
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
@@ -42,7 +41,7 @@ const NewPropertyForm = ({ token }) => {
             .then((response) => response.json())
             .then((data) => setUsers(data.data))
             .catch((error) => console.error(error));
-    }, []);
+    });
 
     const handleChange = (event) => {
         let value = event.target.value;
@@ -72,7 +71,7 @@ const NewPropertyForm = ({ token }) => {
         })
             .then(response => {
                 if (response.ok) {
-                    setIsSuccess(true);
+                    // setIsSuccess(true);
                     setOpenSnackbar(true);
                 }
                 return response.json();

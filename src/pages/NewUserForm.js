@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 import API_HOST from '../config';
-import {makeStyles} from '@material-ui/core/styles';
+// import {makeStyles} from '@material-ui/core/styles';
 import { Button, TextField, Box,FormControl,InputLabel, Select, MenuItem } from '@material-ui/core';
 import { Snackbar } from '@material-ui/core';
 
 
-const useStyles = makeStyles((theme) => ({
-    paper: {
-        margin: theme.spacing(8, 4),
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-    },
-    form: {
-        width: '100%',
-        marginTop: theme.spacing(1),
-    },
-    submit: {
-        margin: theme.spacing(3, 0, 2),
-    },
-}));
+// const useStyles = makeStyles((theme) => ({
+//     paper: {
+//         margin: theme.spacing(8, 4),
+//         display: 'flex',
+//         flexDirection: 'column',
+//         alignItems: 'center',
+//     },
+//     form: {
+//         width: '100%',
+//         marginTop: theme.spacing(1),
+//     },
+//     submit: {
+//         margin: theme.spacing(3, 0, 2),
+//     },
+// }));
 
 const NewUserForm = (token) => {
     const [email, setEmail] = useState('');
@@ -29,7 +29,7 @@ const NewUserForm = (token) => {
     const [role, setRole] = useState('');
     const [hasWork, setHasWork] = useState(false);
     const [openSnackbar, setOpenSnackbar] = useState(false);
-    const classes = useStyles();
+    // const classes = useStyles();
     const [emailError, setEmailError] = useState('');
     const [phoneNumberError, setPhoneNumberError] = useState('');
 

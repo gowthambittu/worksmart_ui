@@ -21,7 +21,6 @@ const useStyles = makeStyles((theme) => ({
     button: {
         color: '#FFFFFF',
         fontWeight: 'bold',
-        margin: theme.spacing(0.5),
         fontSize: '1em',
         padding: '4px 10px',
         margin: theme.spacing(1),
@@ -32,7 +31,6 @@ const useStyles = makeStyles((theme) => ({
     selectedButton: {
         color: '#FFFFFF',
         fontWeight: 'bold',
-        margin: theme.spacing(0.5),
         fontSize: '1em',
         padding: '4px 10px',
         margin: theme.spacing(1),

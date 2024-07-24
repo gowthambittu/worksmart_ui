@@ -8,7 +8,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
 import { Box } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
-import { Card, CardContent, Typography } from '@material-ui/core';
+import { Card, CardContent } from '@material-ui/core';
 import { Chip } from '@material-ui/core';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -47,7 +47,7 @@ const useStyles = makeStyles({
 const Outbound = ({ username, authToken }) => {
 
     const [outbound, setOutbound] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // const [isLoading, setIsLoading] = useState(true);
     const [refreshData, setRefreshData] = useState(false);
     const navigate = useNavigate();
     const classes = useStyles();
@@ -137,13 +137,13 @@ const Outbound = ({ username, authToken }) => {
             })
             .then(data => {
                 setOutbound(data.data);
-                setIsLoading(false); // Set loading to false after data is fetched
+                // setIsLoading(false); // Set loading to false after data is fetched
             })
             .catch(error => {
                 navigate('/login')
                 console.error('There was an error!', error);
             });
-    }, [refreshData]);
+    }, [refreshData,navigate]);
 
 
     const submitWorkRecord = () => {

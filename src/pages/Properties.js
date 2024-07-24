@@ -12,27 +12,27 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import { Link } from 'react-router-dom';
-import { makeStyles } from '@material-ui/core/styles';
+// import { makeStyles } from '@material-ui/core/styles';
 
-const useStyles = makeStyles((theme) => ({
-    navbar: {
-      backgroundColor: '#131921',
-      height: '50px',
-    },
-    toolbar: {
-        display: 'flex',
-        justifyContent: 'flex-start',
-      },
-      button: {
-        color: '#FFFFFF',
-        fontWeight: 'bold',
-        fontSize: '1.2em',
-        margin: theme.spacing(1),
-        '&:hover': {
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        },
-      },
-  }));
+// const useStyles = makeStyles((theme) => ({
+//     navbar: {
+//       backgroundColor: '#131921',
+//       height: '50px',
+//     },
+//     toolbar: {
+//         display: 'flex',
+//         justifyContent: 'flex-start',
+//       },
+//       button: {
+//         color: '#FFFFFF',
+//         fontWeight: 'bold',
+//         fontSize: '1.2em',
+//         margin: theme.spacing(1),
+//         '&:hover': {
+//           backgroundColor: 'rgba(255, 255, 255, 0.1)',
+//         },
+//       },
+//   }));
 
 const Properties = ({ username,authToken }) => {
     const [data, setData] = useState([]);
@@ -42,10 +42,10 @@ const Properties = ({ username,authToken }) => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const navigate = useNavigate();
-    const [redirectToNewProperty, setRedirectToNewProperty] = useState(false);
+    // const [redirectToNewProperty, setRedirectToNewProperty] = useState(false);
     const [open, setOpen] = useState(false);
     const [refreshData, setRefreshData] = useState(false);
-    const classes = useStyles();
+    // const classes = useStyles();
 
 
     const handleClose = () => {
@@ -87,7 +87,7 @@ const Properties = ({ username,authToken }) => {
                 // alert(error.message);
                 navigate('/login');
             });
-    }, [navigate,refreshData]);
+    }, [navigate,refreshData,authToken]);
 
     let filteredData = data;
     Object.keys(filters).forEach((key) => {

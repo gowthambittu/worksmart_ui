@@ -2,45 +2,44 @@ import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, TableBody, TableCell, TableRow } from '@material-ui/core';
 import Layout from './Layout';
 import NewUserForm from './NewUserForm';
-import {A} from 'react'; // Add the missing import statement for 'react'
 import API_HOST from '../config';
-import { makeStyles } from '@material-ui/core/styles';
+// import { makeStyles } from '@material-ui/core/styles';
 import { useNavigate } from 'react-router-dom';
 import UpdateUserForm from './UpdateUserForm';
 
 import { Table, TableContainer, TableHead, Paper, TablePagination } from '@material-ui/core';
 
 
-const useStyles = makeStyles((theme) => ({
-  navbar: {
-    backgroundColor: '#131921',
-    height: '50px',
-  },
-  toolbar: {
-      display: 'flex',
-      justifyContent: 'flex-start',
-    },
-    button: {
-      color: '#FFFFFF',
-      fontWeight: 'bold',
-      fontSize: '1.2em',
-      margin: theme.spacing(1),
-      '&:hover': {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      },
-    },
-}));
+// const useStyles = makeStyles((theme) => ({
+//   navbar: {
+//     backgroundColor: '#131921',
+//     height: '50px',
+//   },
+//   toolbar: {
+//       display: 'flex',
+//       justifyContent: 'flex-start',
+//     },
+//     button: {
+//       color: '#FFFFFF',
+//       fontWeight: 'bold',
+//       fontSize: '1.2em',
+//       margin: theme.spacing(1),
+//       '&:hover': {
+//         backgroundColor: 'rgba(255, 255, 255, 0.1)',
+//       },
+//     },
+// }));
 
 const UserManagement = (parms) => {
-  const [filters, setFilters] = useState({ property_name: '', location: '', created_at: '' });
-  const [sort, setSort] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
+  // const [filters, setFilters] = useState({ property_name: '', location: '', created_at: '' });
+  // const [sort, setSort] = useState(null);
+  // const [sortOrder, setSortOrder] = useState('asc');
   const navigate = useNavigate();
-  const [redirectToNewProperty, setRedirectToNewProperty] = useState(false);
+  // const [redirectToNewProperty, setRedirectToNewProperty] = useState(false);
   const [open, setOpen] = useState(false);
   const [booleanupdate, setBooleanupdate] = useState(false);
   const [refreshData, setRefreshData] = useState(false);
-  const classes = useStyles();
+  // const classes = useStyles();
   const [data, setData] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -54,11 +53,11 @@ const UserManagement = (parms) => {
 
  
 
-  const handleSubmit = () => {
-    // Implement your update logic here
-    console.log('Submitting', currentUser);
-    setOpen(false);
-  };
+  // const handleSubmit = () => {
+  //   // Implement your update logic here
+  //   console.log('Submitting', currentUser);
+  //   setOpen(false);
+  // };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -106,7 +105,7 @@ const handleUpdateClose = () => {
             // alert(error.message);
             navigate('/login');
         });
-}, [navigate,refreshData]);
+}, [navigate,refreshData,parms.authToken]);
 
 const filteredData = data.filter((user) => 
   (user.full_name ? user.full_name.toLowerCase().includes(search.toLowerCase()) : false) ||

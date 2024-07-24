@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { useNavigate } from 'react-router-dom'; 
+// import { useNavigate } from 'react-router-dom'; 
 import API_HOST from '../config';
 
 const useStyles = makeStyles({
@@ -44,8 +44,8 @@ const LoginForm = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState(false);
   const classes = useStyles();
-  const navigate = useNavigate();
-  const [loggedIn, setLoggedIn] = useState(false);
+  // const navigate = useNavigate();
+  
 
   const handleLogin = async () => {
     console.log('Login clicked. Email:', email, 'Password:', password);
@@ -74,10 +74,10 @@ const LoginForm = ({ onLogin }) => {
     }
   };
 
-  const handleSignup = () => {
-    console.log('Signup clicked. Email:', email, 'Password:', password);
-    navigate('/registration');
-  };
+  // const handleSignup = () => {
+  //   console.log('Signup clicked. Email:', email, 'Password:', password);
+  //   navigate('/registration');
+  // };
 
   const validateEmail = (inputEmail) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

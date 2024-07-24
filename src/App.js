@@ -5,7 +5,6 @@ import RegistrationForm from './pages/RegistrationForm';
 import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
 import NewPropertyForm from './pages/NewPropertyForm';
-import API_HOST from './config';
 import { Navigate } from 'react-router-dom';
 import Property from './pages/Property';
 import Outbound from './pages/Outbound';
@@ -69,7 +68,7 @@ const Redirector = ({ token, userRole,isLogged }) => {
     }
     }
     
-  }, [token, userRole, navigate, hasRedirected]);
+  }, [token, userRole, navigate, hasRedirected,isLogged]);
 
   return null;
 };

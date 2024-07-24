@@ -10,7 +10,7 @@ import { Chip } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { Box } from '@material-ui/core';
 import { Grid } from '@material-ui/core';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Collapse, IconButton } from '@material-ui/core';
+import { Table, TableBody, TableCell, TableHead, TableRow, Collapse, IconButton } from '@material-ui/core';
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
 import { withStyles } from '@material-ui/core/styles';
@@ -18,7 +18,6 @@ import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
-import NewPropertyForm from './NewPropertyForm';
 import NewWorkRecord from './NewWorkRecord';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -127,23 +126,23 @@ const Property = ({ username, authToken }) => {
     };
 
 
-    const handleReject = async (recordId, work_done) => {
-        const response = await fetch(`${API_HOST}/api/work_record`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            },
-            body: JSON.stringify({
-                record_id: recordId,
-                is_verified: 0,
-                work_done: -work_done
-            })
-        });
+    // const handleReject = async (recordId, work_done) => {
+    //     const response = await fetch(`${API_HOST}/api/work_record`, {
+    //         method: 'PUT',
+    //         headers: {
+    //             'Content-Type': 'application/json',
+    //             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+    //         },
+    //         body: JSON.stringify({
+    //             record_id: recordId,
+    //             is_verified: 0,
+    //             work_done: -work_done
+    //         })
+    //     });
 
-        const data = await response.json();
-        console.log(data);
-    };
+    //     const data = await response.json();
+    //     console.log(data);
+    // };
 
     const classes = useStyles();
     const handleBack = () => {
