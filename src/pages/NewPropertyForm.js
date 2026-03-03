@@ -58,16 +58,24 @@ const NewPropertyForm = ({ token }) => {
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        if (!property.assigned_labour_id || !property.assigned_driver_id) {
-            setErrorMessage('Please assign one labour and one driver.');
+        if (!property.assigned_labour_id && !property.assigned_driver_id) {
+            setErrorMessage('Please assign at least one user group (labour or driver).');
             return;
         }
         let propertyData = { ...property };
         if (propertyData.purchase_date) {
             propertyData.purchase_date = format(new Date(propertyData.purchase_date), 'MM-dd-yyyy');
         }
-        propertyData.assigned_labour_id = Number(propertyData.assigned_labour_id);
-        propertyData.assigned_driver_id = Number(propertyData.assigned_driver_id);
+        if (propertyData.assigned_labour_id) {
+            propertyData.assigned_labour_id = Number(propertyData.assigned_labour_id);
+        } else {
+            delete propertyData.assigned_labour_id;
+        }
+        if (propertyData.assigned_driver_id) {
+            propertyData.assigned_driver_id = Number(propertyData.assigned_driver_id);
+        } else {
+            delete propertyData.assigned_driver_id;
+        }
         fetch(`${API_HOST}/api/property`, {
             method: 'POST',
             headers: {
@@ -121,7 +129,7 @@ const NewPropertyForm = ({ token }) => {
                         />
                         <TextField fullWidth margin="normal" name="location" label="Location" onChange={handleChange} />
                         <FormControl fullWidth margin="normal">
-                            <InputLabel id="assigned_labour_id-label">Assign Labour</InputLabel>
+                            <InputLabel id="assigned_labour_id-label">Assign Labour (Optional)</InputLabel>
                             <Select
                                 labelId="assigned_labour_id-label"
                                 fullWidth
@@ -137,7 +145,7 @@ const NewPropertyForm = ({ token }) => {
                             </Select>
                         </FormControl>
                         <FormControl fullWidth margin="normal">
-                            <InputLabel id="assigned_driver_id-label">Assign Driver</InputLabel>
+                            <InputLabel id="assigned_driver_id-label">Assign Driver (Optional)</InputLabel>
                             <Select
                                 labelId="assigned_driver_id-label"
                                 fullWidth

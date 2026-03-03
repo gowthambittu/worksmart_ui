@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { Button } from '@material-ui/core';
 
 import NewPropertyForm from './NewPropertyForm';
+import UpdatePropertyForm from './UpdatePropertyForm';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -44,6 +45,8 @@ const Properties = ({ username,authToken }) => {
     const navigate = useNavigate();
     // const [redirectToNewProperty, setRedirectToNewProperty] = useState(false);
     const [open, setOpen] = useState(false);
+    const [openUpdate, setOpenUpdate] = useState(false);
+    const [selectedProperty, setSelectedProperty] = useState(null);
     const [refreshData, setRefreshData] = useState(false);
     // const classes = useStyles();
 
@@ -55,6 +58,22 @@ const Properties = ({ username,authToken }) => {
 
     const handleAddProperty = () => {
         setOpen(true);
+    };
+
+    const handleOpenUpdate = (property) => {
+        setSelectedProperty(property);
+        setOpenUpdate(true);
+    };
+
+    const handleCloseUpdate = () => {
+        setOpenUpdate(false);
+        setSelectedProperty(null);
+    };
+
+    const handleUpdateSuccess = () => {
+        setOpenUpdate(false);
+        setSelectedProperty(null);
+        setRefreshData(!refreshData);
     };
 
     const handleSort = (property) => {
@@ -216,7 +235,27 @@ const Properties = ({ username,authToken }) => {
                                 <TableCell>{item.estimated_work}</TableCell>
                                 <TableCell>{item.completed_work}</TableCell>
                                 <TableCell>{item.land_area_acres}</TableCell>
-                                <TableCell><Button component={Link} to={`/adminView/property/${item.property_id}`}>View</Button></TableCell>
+                                <TableCell>
+                                    <div style={{ display: 'flex', flexDirection: 'row', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
+                                    <Button
+                                        component={Link}
+                                        to={`/adminView/property/${item.property_id}`}
+                                        variant="contained"
+                                        size="small"
+                                        style={{ backgroundColor: '#1976d2', color: '#fff', minWidth: 72 }}
+                                    >
+                                        View
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleOpenUpdate(item)}
+                                        variant="contained"
+                                        size="small"
+                                        style={{ backgroundColor: '#2e7d32', color: '#fff', minWidth: 72 }}
+                                    >
+                                        Update
+                                    </Button>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -245,6 +284,21 @@ const Properties = ({ username,authToken }) => {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleClose} color="primary">
+                            Cancel
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+                <Dialog maxWidth="sm" open={openUpdate} onClose={handleCloseUpdate} aria-labelledby="update-form-dialog-title">
+                    <DialogTitle id="update-form-dialog-title">Update Property</DialogTitle>
+                    <DialogContent>
+                        <UpdatePropertyForm
+                            token={authToken}
+                            propertyData={selectedProperty}
+                            onSuccess={handleUpdateSuccess}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseUpdate} color="primary">
                             Cancel
                         </Button>
                     </DialogActions>

@@ -257,21 +257,25 @@ const Property = ({ username, authToken }) => {
     };
 
     const handleCreateWorkOrderGroup = async () => {
-        if (!assignment.assigned_labour_id || !assignment.assigned_driver_id) {
-            setAssignmentError('Please select both labour and driver.');
+        if (!assignment.assigned_labour_id && !assignment.assigned_driver_id) {
+            setAssignmentError('Please select at least one group (labour or driver).');
             return;
         }
         setAssignmentError('');
+        const payload = {};
+        if (assignment.assigned_labour_id) {
+            payload.assigned_labour_id = Number(assignment.assigned_labour_id);
+        }
+        if (assignment.assigned_driver_id) {
+            payload.assigned_driver_id = Number(assignment.assigned_driver_id);
+        }
         const response = await fetch(`${API_HOST}/api/property/${propert_id}/work_order`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             },
-            body: JSON.stringify({
-                assigned_labour_id: Number(assignment.assigned_labour_id),
-                assigned_driver_id: Number(assignment.assigned_driver_id),
-            }),
+            body: JSON.stringify(payload),
         });
 
         const data = await response.json();
@@ -507,7 +511,7 @@ const Property = ({ username, authToken }) => {
                 <DialogTitle id="assign-work-order-group-title">Assign New Work Order Group</DialogTitle>
                 <DialogContent>
                     <FormControl fullWidth margin="normal">
-                        <InputLabel id="property-assigned-labour-label">Assign Labour</InputLabel>
+                        <InputLabel id="property-assigned-labour-label">Assign Labour (Optional)</InputLabel>
                         <Select
                             labelId="property-assigned-labour-label"
                             fullWidth
@@ -523,7 +527,7 @@ const Property = ({ username, authToken }) => {
                         </Select>
                     </FormControl>
                     <FormControl fullWidth margin="normal">
-                        <InputLabel id="property-assigned-driver-label">Assign Driver</InputLabel>
+                        <InputLabel id="property-assigned-driver-label">Assign Driver (Optional)</InputLabel>
                         <Select
                             labelId="property-assigned-driver-label"
                             fullWidth
