@@ -18,6 +18,7 @@ import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
+import { Select, MenuItem, FormControl, InputLabel, TextField } from '@material-ui/core';
 import NewWorkRecord from './NewWorkRecord';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -61,6 +62,13 @@ const Property = ({ username, authToken }) => {
     const [zoomOpen, setZoomOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
     const [zoomLevel, setZoomLevel] = useState(1);
+    const [openAssignment, setOpenAssignment] = useState(false);
+    const [users, setUsers] = useState([]);
+    const [assignment, setAssignment] = useState({
+        assigned_labour_id: '',
+        assigned_driver_id: '',
+    });
+    const [assignmentError, setAssignmentError] = useState('');
 
     const zoomIn = (event) => {
         event.stopPropagation(); // Prevent click event from propagating to the dialog
@@ -176,6 +184,20 @@ const Property = ({ username, authToken }) => {
             });
     }, [navigate, propert_id, refreshData]);
 
+    useEffect(() => {
+        fetch(`${API_HOST}/auth/users`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json',
+            },
+        })
+            .then((response) => response.json())
+            .then((data) => setUsers(data.data || []))
+            .catch((error) => console.error(error));
+    }, []);
+
     if (isLoading) {
         return <CircularProgress />;
     }
@@ -222,6 +244,45 @@ const Property = ({ username, authToken }) => {
 
         doc.save(`work_order_${workOrder.work_order_id}.pdf`);
 
+    };
+
+    const labourUsers = users.filter((user) => user.role === 'labour');
+    const driverUsers = users.filter((user) => user.role === 'driver');
+
+    const handleAssignmentChange = (event) => {
+        setAssignment({
+            ...assignment,
+            [event.target.name]: event.target.value,
+        });
+    };
+
+    const handleCreateWorkOrderGroup = async () => {
+        if (!assignment.assigned_labour_id || !assignment.assigned_driver_id) {
+            setAssignmentError('Please select both labour and driver.');
+            return;
+        }
+        setAssignmentError('');
+        const response = await fetch(`${API_HOST}/api/property/${propert_id}/work_order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+            body: JSON.stringify({
+                assigned_labour_id: Number(assignment.assigned_labour_id),
+                assigned_driver_id: Number(assignment.assigned_driver_id),
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || data.status === 'fail') {
+            setAssignmentError(data.message || 'Failed to create work order group.');
+            return;
+        }
+
+        setOpenAssignment(false);
+        setAssignment({ assigned_labour_id: '', assigned_driver_id: '' });
+        setRefreshData(!refreshData);
     };
 
 
@@ -278,6 +339,15 @@ const Property = ({ username, authToken }) => {
                             <Typography color="textSecondary">
                                 Cost to Labour: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(propertyDetails.cost_to_labour)}
                             </Typography>
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={() => setOpenAssignment(true)}
+                            >
+                                Assign New Group
+                            </Button>
                         </Grid>
                     </Grid>
                 </CardContent>
@@ -427,6 +497,66 @@ const Property = ({ username, authToken }) => {
                     {/* Render your work orders here */}
                 </CardContent>
             </Card>
+
+            <Dialog
+                maxWidth="sm"
+                open={openAssignment}
+                onClose={() => setOpenAssignment(false)}
+                aria-labelledby="assign-work-order-group-title"
+            >
+                <DialogTitle id="assign-work-order-group-title">Assign New Work Order Group</DialogTitle>
+                <DialogContent>
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel id="property-assigned-labour-label">Assign Labour</InputLabel>
+                        <Select
+                            labelId="property-assigned-labour-label"
+                            fullWidth
+                            name="assigned_labour_id"
+                            onChange={handleAssignmentChange}
+                            value={assignment.assigned_labour_id}
+                        >
+                            {labourUsers.map((user) => (
+                                <MenuItem key={user.user_id} value={user.user_id.toString()}>
+                                    {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel id="property-assigned-driver-label">Assign Driver</InputLabel>
+                        <Select
+                            labelId="property-assigned-driver-label"
+                            fullWidth
+                            name="assigned_driver_id"
+                            onChange={handleAssignmentChange}
+                            value={assignment.assigned_driver_id}
+                        >
+                            {driverUsers.map((user) => (
+                                <MenuItem key={user.user_id} value={user.user_id.toString()}>
+                                    {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    {assignmentError && (
+                        <TextField
+                            fullWidth
+                            margin="normal"
+                            value={assignmentError}
+                            InputProps={{ readOnly: true }}
+                            error
+                        />
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenAssignment(false)} color="primary">
+                        Cancel
+                    </Button>
+                    <Button onClick={handleCreateWorkOrderGroup} color="primary" variant="contained">
+                        Create Group
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Button onClick={handleBack}>Back</Button>
         </Layout>

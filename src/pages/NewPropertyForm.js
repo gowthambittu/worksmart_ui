@@ -20,7 +20,8 @@ const NewPropertyForm = ({ token }) => {
         purchase_cost: '',
         purchase_date: '',
         location: '',
-        assigne_labour: [],
+        assigned_labour_id: '',
+        assigned_driver_id: '',
         cost_to_labour: '',
         cost_to_driver: '',
     });
@@ -28,6 +29,7 @@ const NewPropertyForm = ({ token }) => {
     // const [isSuccess, setIsSuccess] = useState(false);
     const [users, setUsers] = useState([]);
     const [openSnackbar, setOpenSnackbar] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
         fetch(`${API_HOST}/auth/users`, {
@@ -39,9 +41,9 @@ const NewPropertyForm = ({ token }) => {
             },
         })
             .then((response) => response.json())
-            .then((data) => setUsers(data.data))
+            .then((data) => setUsers(data.data || []))
             .catch((error) => console.error(error));
-    });
+    }, [token]);
 
     const handleChange = (event) => {
         let value = event.target.value;
@@ -56,10 +58,16 @@ const NewPropertyForm = ({ token }) => {
 
     const handleSubmit = (event) => {
         event.preventDefault();
+        if (!property.assigned_labour_id || !property.assigned_driver_id) {
+            setErrorMessage('Please assign one labour and one driver.');
+            return;
+        }
         let propertyData = { ...property };
         if (propertyData.purchase_date) {
             propertyData.purchase_date = format(new Date(propertyData.purchase_date), 'MM-dd-yyyy');
         }
+        propertyData.assigned_labour_id = Number(propertyData.assigned_labour_id);
+        propertyData.assigned_driver_id = Number(propertyData.assigned_driver_id);
         fetch(`${API_HOST}/api/property`, {
             method: 'POST',
             headers: {
@@ -71,16 +79,24 @@ const NewPropertyForm = ({ token }) => {
         })
             .then(response => {
                 if (response.ok) {
-                    // setIsSuccess(true);
+                    setErrorMessage('');
                     setOpenSnackbar(true);
                 }
                 return response.json();
             })
-            .then(data => console.log(data))
+            .then(data => {
+                if (data.status === 'fail') {
+                    setErrorMessage(data.message || 'Failed to create property.');
+                }
+            })
             .catch((error) => {
                 console.error('Error:', error);
+                setErrorMessage('Failed to create property.');
             });
     };
+
+    const labourUsers = users.filter((user) => user.role === 'labour');
+    const driverUsers = users.filter((user) => user.role === 'driver');
 
     return (
         <Grid container justify="center">
@@ -105,24 +121,44 @@ const NewPropertyForm = ({ token }) => {
                         />
                         <TextField fullWidth margin="normal" name="location" label="Location" onChange={handleChange} />
                         <FormControl fullWidth margin="normal">
-    <InputLabel id="assigne_labour-label">Assign Labour</InputLabel>
-    <Select
-        labelId="assigne_labour-label"
-        fullWidth
-        multiple
-        name="assigne_labour"
-        onChange={handleChange}
-        value={property.assigne_labour}
-    >
-        {users.map((user) => (
-            <MenuItem key={user.user_id} value={user.user_id.toString()}>
-                {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'} - {user.role}
-            </MenuItem>
-        ))}
-    </Select>
-</FormControl>
+                            <InputLabel id="assigned_labour_id-label">Assign Labour</InputLabel>
+                            <Select
+                                labelId="assigned_labour_id-label"
+                                fullWidth
+                                name="assigned_labour_id"
+                                onChange={handleChange}
+                                value={property.assigned_labour_id}
+                            >
+                                {labourUsers.map((user) => (
+                                    <MenuItem key={user.user_id} value={user.user_id.toString()}>
+                                        {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel id="assigned_driver_id-label">Assign Driver</InputLabel>
+                            <Select
+                                labelId="assigned_driver_id-label"
+                                fullWidth
+                                name="assigned_driver_id"
+                                onChange={handleChange}
+                                value={property.assigned_driver_id}
+                            >
+                                {driverUsers.map((user) => (
+                                    <MenuItem key={user.user_id} value={user.user_id.toString()}>
+                                        {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                         <TextField fullWidth margin="normal" name="cost_to_labour" label="Cost to Labour" onChange={handleChange} />
                         <TextField fullWidth margin="normal" name="cost_to_driver" label="Cost to Driver" onChange={handleChange} />
+                        {errorMessage && (
+                            <Typography color="error" style={{ marginTop: 8 }}>
+                                {errorMessage}
+                            </Typography>
+                        )}
                         <Button type="submit" variant="contained" color="primary" fullWidth style={{ marginTop: 16 }}>Save</Button>
                     </form>
                     <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={() => setOpenSnackbar(false)}>

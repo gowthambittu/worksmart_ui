@@ -1,4 +1,4 @@
 // config.js
-const API_HOST = 'https://backend.smartworkmanagement.com'; // Replace with your actual API host
+const API_HOST = (process.env.REACT_APP_API_HOST || 'http://localhost:8080').replace(/\/$/, '');
 
 export default API_HOST;

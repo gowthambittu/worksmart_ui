@@ -7,6 +7,7 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
+import API_HOST from '../config';
 
 const RegistrationForm = () => {
   // State for form fields
@@ -35,7 +36,7 @@ const RegistrationForm = () => {
 
     // Make a POST request with form data
     try {
-      const response = await fetch('http://127.0.0.1:8000/auth/register', {
+      const response = await fetch(`${API_HOST}/auth/register`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
