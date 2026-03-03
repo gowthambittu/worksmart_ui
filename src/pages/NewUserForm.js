@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import API_HOST from '../config';
 // import {makeStyles} from '@material-ui/core/styles';
 import { Button, TextField, Box,FormControl,InputLabel, Select, MenuItem } from '@material-ui/core';
 import { Snackbar } from '@material-ui/core';
+import { apiFetch } from '../utils/apiClient';
 
 
 // const useStyles = makeStyles((theme) => ({
@@ -62,7 +62,7 @@ const NewUserForm = (token) => {
             role: role
         };
 
-        fetch(`${API_HOST}/auth/users`, {
+        apiFetch('/auth/users', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token.token}`,
@@ -70,20 +70,16 @@ const NewUserForm = (token) => {
             },
             body: JSON.stringify(userData),
         })
-        .then(response => {
-            if (response.ok) {
-                // Clear the state variables
-                setEmail('');
-                setPassword('');
-                setOpenSnackbar(true); // Open the snackbar
-                setFullName('');
-                setPhoneNumber('');
-                setRole('');
-                
-            }
-            return response.json();
+        .then(({ data }) => {
+            console.log(data);
+            // Clear the state variables
+            setEmail('');
+            setPassword('');
+            setOpenSnackbar(true); // Open the snackbar
+            setFullName('');
+            setPhoneNumber('');
+            setRole('');
         })
-        .then(data => console.log(data))
         .catch((error) => {
             console.error('Error:', error);
         });

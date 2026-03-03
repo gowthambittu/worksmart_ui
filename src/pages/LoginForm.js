@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 // import { useNavigate } from 'react-router-dom'; 
-import API_HOST from '../config';
+import { apiFetch } from '../utils/apiClient';
 
 const useStyles = makeStyles({
   loginFormContainer: {
@@ -51,25 +51,22 @@ const LoginForm = ({ onLogin }) => {
     console.log('Login clicked. Email:', email, 'Password:', password);
     if (!emailError) {
       try {
-        const response = await fetch(`${API_HOST}/auth/login`, {
+        const response = await apiFetch('/auth/login', {
           method: 'POST',
           headers: {
-            'Accept': 'application/json',
             'Content-Type': 'application/json',
             //  'Access-Control-Allow-Origin': '*'
           },
           body: JSON.stringify({ email, password }),
         });
 
-        if (response.ok) {
-          const data = await response.json();
-          const authToken = data.auth_token;
-          const userRole = data.user_role; 
-          const username = email.split('@')[0]; // Extract the string before the '@' symbol from the email
-          onLogin(authToken, userRole, username); // Pass the username to the onLogin function
-        }
+        const data = response.data;
+        const authToken = data.auth_token;
+        const userRole = data.user_role; 
+        const username = email.split('@')[0]; // Extract the string before the '@' symbol from the email
+        onLogin(authToken, userRole, username); // Pass the username to the onLogin function
       } catch (error) {
-        console.error('Error during login:', error.message);
+        console.error('Error during login:', error?.data?.message || error.message);
       }
     }
   };

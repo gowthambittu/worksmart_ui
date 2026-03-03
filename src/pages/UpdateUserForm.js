@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button ,Select, MenuItem,InputLabel} from '@material-ui/core';
 import { Radio, RadioGroup, FormControl, FormControlLabel, FormLabel } from '@material-ui/core';
-import API_HOST from '../config';
 import { Snackbar } from '@material-ui/core';
+import { apiFetch } from '../utils/apiClient';
 
 
 const UpdateUserForm = (parms) => {
@@ -45,7 +45,7 @@ const UpdateUserForm = (parms) => {
             role: role
         };
 
-        fetch(`${API_HOST}/auth/users/${user.user_id}`, {
+        apiFetch(`/auth/users/${user.user_id}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${parms.token}`,
@@ -53,19 +53,15 @@ const UpdateUserForm = (parms) => {
             },
             body: JSON.stringify(userData),
         })
-        .then(response => {
-            if (response.ok) {
-                // Clear the state variables
-                setEmail('');
-                setOpenSnackbar(true); // Open the snackbar
-                setFullName('');
-                setPhoneNumber('');
-                setRole('');
-                
-            }
-            return response.json();
+        .then(({ data }) => {
+            console.log(data);
+            // Clear the state variables
+            setEmail('');
+            setOpenSnackbar(true); // Open the snackbar
+            setFullName('');
+            setPhoneNumber('');
+            setRole('');
         })
-        .then(data => console.log(data))
         .catch((error) => {
             console.error('Error:', error);
         });

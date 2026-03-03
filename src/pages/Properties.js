@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
-import API_HOST from '../config';
+import { apiFetch } from '../utils/apiClient';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TableSortLabel, InputBase, TablePagination } from '@material-ui/core';
 
 import { Button } from '@material-ui/core';
@@ -87,23 +87,15 @@ const Properties = ({ username,authToken }) => {
     };
 
     useEffect(() => {
-        fetch(`${API_HOST}/api/property`, {
+        apiFetch('/api/property', {
             headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            }
+                Authorization: `Bearer ${authToken}`
+            },
         })
-            .then(response => {
-                if (response.status === 403) {
-                    throw new Error('Invalid token. Please log in again.');
-                }
-                return response.json();
-            })
-            .then(data => {
+            .then(({ data }) => {
                 setData(data.data);
             })
-            .catch(error => {
-                // alert(error.message);
+            .catch(() => {
                 navigate('/login');
             });
     }, [navigate,refreshData,authToken]);

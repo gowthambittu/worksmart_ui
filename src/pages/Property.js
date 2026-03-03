@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@material-ui/core';
 import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
-import API_HOST from '../config';
+import { apiFetch } from '../utils/apiClient';
 import { Card, CardContent, Typography } from '@material-ui/core';
 import { CircularProgress } from '@material-ui/core';
 import { Chip } from '@material-ui/core';
@@ -108,25 +108,25 @@ const Property = ({ username, authToken }) => {
 
     const handleApprove = async (recordId, work_done) => {
         console.log('handleApprove called', work_done);
-        const response = await fetch(`${API_HOST}/api/work_record`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            },
-            body: JSON.stringify({
-                record_id: recordId,
-                is_verified: "1",
-                work_done: work_done
-            })
-        });
-
-        response.json().then(data => {
+        try {
+            const response = await apiFetch('/api/work_record', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({
+                    record_id: recordId,
+                    is_verified: "1",
+                    work_done: work_done
+                })
+            });
+            const data = response.data;
             console.log(data);
-            if (response.ok) {
-                setRefreshData(!refreshData);
-            }
-        });
+            setRefreshData(!refreshData);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     const submitWorkRecord = () => {
@@ -158,22 +158,15 @@ const Property = ({ username, authToken }) => {
         navigate('/properties');
     };
     useEffect(() => {
-        fetch(`${API_HOST}/api/property/${propert_id}`, {
+        apiFetch(`/api/property/${propert_id}`, {
             headers: {
-                'Accept': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             }
         })
-            .then(response => response.json())
-            .then(response => {
-
-                if (response.status === 'fail') {
+            .then(({ data }) => {
+                if (data.status === 'fail') {
                     navigate('/login');
                 }
-                return response;
-
-            })
-            .then(data => {
                 setProperty(data.data);
                 console.log('Property data:', data);
                 setIsLoading(false); // Set loading to false after data is fetched
@@ -185,16 +178,14 @@ const Property = ({ username, authToken }) => {
     }, [navigate, propert_id, refreshData]);
 
     useEffect(() => {
-        fetch(`${API_HOST}/auth/users`, {
+        apiFetch('/auth/users', {
             method: 'GET',
             headers: {
-                'Accept': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
                 'Content-Type': 'application/json',
             },
         })
-            .then((response) => response.json())
-            .then((data) => setUsers(data.data || []))
+            .then(({ data }) => setUsers(data.data || []))
             .catch((error) => console.error(error));
     }, []);
 
@@ -269,24 +260,28 @@ const Property = ({ username, authToken }) => {
         if (assignment.assigned_driver_id) {
             payload.assigned_driver_id = Number(assignment.assigned_driver_id);
         }
-        const response = await fetch(`${API_HOST}/api/property/${propert_id}/work_order`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            },
-            body: JSON.stringify(payload),
-        });
+        try {
+            const response = await apiFetch(`/api/property/${propert_id}/work_order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                },
+                body: JSON.stringify(payload),
+            });
 
-        const data = await response.json();
-        if (!response.ok || data.status === 'fail') {
-            setAssignmentError(data.message || 'Failed to create work order group.');
-            return;
+            const data = response.data;
+            if (data.status === 'fail') {
+                setAssignmentError(data.message || 'Failed to create work order group.');
+                return;
+            }
+
+            setOpenAssignment(false);
+            setAssignment({ assigned_labour_id: '', assigned_driver_id: '' });
+            setRefreshData(!refreshData);
+        } catch (error) {
+            setAssignmentError(error?.data?.message || 'Failed to create work order group.');
         }
-
-        setOpenAssignment(false);
-        setAssignment({ assigned_labour_id: '', assigned_driver_id: '' });
-        setRefreshData(!refreshData);
     };
 
 

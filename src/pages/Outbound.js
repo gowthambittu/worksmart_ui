@@ -1,7 +1,6 @@
 import React from 'react';
 import Layout from './Layout';
 import { useState, useEffect } from 'react';
-import API_HOST from '../config';
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, Paper, TableSortLabel, InputBase, TableContainer, TablePagination, TableHead, TableRow } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
@@ -17,6 +16,7 @@ import NewOutboundRecord from './NewOutboundRecord'
 import { TextField } from '@material-ui/core';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { apiFetch } from '../utils/apiClient';
 
 const useStyles = makeStyles({
     chip: {
@@ -119,23 +119,16 @@ const Outbound = ({ username, authToken }) => {
 
 
     useEffect(() => {
-        fetch(`${API_HOST}/api/outbound_record`, {
+        apiFetch('/api/outbound_record', {
             method: 'GET',
             headers: {
-                'Accept': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             }
         })
-            .then(response => response.json())
-            .then(response => {
-
-                if (response.status === 'fail') {
+            .then(({ data }) => {
+                if (data.status === 'fail') {
                     navigate('/login');
                 }
-                return response;
-
-            })
-            .then(data => {
                 setOutbound(data.data);
                 // setIsLoading(false); // Set loading to false after data is fetched
             })
@@ -163,23 +156,22 @@ const Outbound = ({ username, authToken }) => {
 
     const handleApprove = async (recordId) => {
         console.log('handleApprove called');
-        const response = await fetch(`${API_HOST}/api/outbound_record`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            },
-            body: JSON.stringify({
-                outbound_id: recordId,
-                is_verified: "1"
-            })
-        });
-        response.json().then(data => {
-
-            if (response.ok) {
-                setRefreshData(!refreshData);
-            }
-        });
+        try {
+            await apiFetch('/api/outbound_record', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({
+                    outbound_id: recordId,
+                    is_verified: "1"
+                })
+            });
+            setRefreshData(!refreshData);
+        } catch (error) {
+            console.error(error);
+        }
     }
     const handleImageClose = () => {
         setZoomOpen(false);

@@ -7,7 +7,7 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import API_HOST from '../config';
+import { apiFetch } from '../utils/apiClient';
 
 const RegistrationForm = () => {
   // State for form fields
@@ -36,19 +36,18 @@ const RegistrationForm = () => {
 
     // Make a POST request with form data
     try {
-      const response = await fetch(`${API_HOST}/auth/register`, {
+      const response = await apiFetch('/auth/register', {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      const data = response.data;
 
       // Check if registration was successful
-      if (response.ok) {
+      if (data.status === 'success') {
         setSuccessMessage('Registration successful!');
         // Additional logic (redirect, etc.) can be added here
       } else {
