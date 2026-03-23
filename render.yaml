@@ -1,0 +1,15 @@
+services:
+  - type: static
+    name: worksmart-ui
+    plan: free
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    staticPublishPath: build
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: REACT_APP_API_HOST
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -68,3 +68,15 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Render Deployment (Free Tier)
+
+This repo includes `render.yaml` for a Render static site.
+
+- Build command: `npm ci && npm run build`
+- Publish directory: `build`
+- SPA rewrite: `/* -> /index.html`
+
+Set this environment variable in Render:
+
+- `REACT_APP_API_HOST` = backend URL (for example `https://worksmart-backend.onrender.com`)
