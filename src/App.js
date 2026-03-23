@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import LoginForm from './pages/LoginForm';
 import RegistrationForm from './pages/RegistrationForm';
 import AdminDashboard from './pages/AdminDashboard';
@@ -53,24 +53,19 @@ const App = () => {
 
 const Redirector = ({ token, userRole,isLogged }) => {
   const navigate = useNavigate();
-  const [hasRedirected, setHasRedirected] = useState(isLogged);
+  const location = useLocation();
  
   useEffect(() => {
-    console.log('Redirector:', token, userRole, hasRedirected);
-    // setHasRedirected(isLogged);
-    if (!isLogged && token) {
+    const isAuthEntryRoute = location.pathname === '/' || location.pathname === '/login';
+    if (!isLogged && token && isAuthEntryRoute) {
       if (userRole === 'admin') {
-        console.log('directing to adminView');
-        navigate('/adminView');
+        navigate('/adminView', { replace: true });
       } else if (userRole === 'driver' || userRole === 'labour') {
-        navigate('/userView');
-      }
-      if (token&& userRole) {
-        setHasRedirected(true);  
-    }
+        navigate('/userView', { replace: true });
+      }      
     }
     
-  }, [token, userRole, navigate, hasRedirected,isLogged]);
+  }, [token, userRole, navigate, isLogged, location.pathname]);
 
   return null;
 };
