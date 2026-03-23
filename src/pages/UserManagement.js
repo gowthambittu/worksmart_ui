@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, TableBody, TableCell, TableRow } from '@material-ui/core';
 import Layout from './Layout';
 import NewUserForm from './NewUserForm';
-import API_HOST from '../config';
+import { apiFetch } from '../utils/apiClient';
 // import { makeStyles } from '@material-ui/core/styles';
 import { useNavigate } from 'react-router-dom';
 import UpdateUserForm from './UpdateUserForm';
@@ -86,23 +86,15 @@ const handleUpdateClose = () => {
   };
 
   useEffect(() => {
-    fetch(`${API_HOST}/auth/users`, {
+    apiFetch('/auth/users', {
         headers: {
-            'Accept': 'application/json',
             'Authorization': `Bearer ${parms.authToken}`
         }
     })
-        .then(response => {
-            if (response.status === 403) {
-                throw new Error('Invalid token. Please log in again.');
-            }
-            return response.json();
-        })
-        .then(data => {
+        .then(({ data }) => {
             setData(data.data);
         })
-        .catch(error => {
-            // alert(error.message);
+        .catch(() => {
             navigate('/login');
         });
 }, [navigate,refreshData,parms.authToken]);

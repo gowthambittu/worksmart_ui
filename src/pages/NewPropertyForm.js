@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Button, TextField, Grid, Paper, Typography } from '@material-ui/core';
-import API_HOST from '../config';
 import { format } from 'date-fns';
 import { useEffect } from 'react';
 import { Select, MenuItem } from '@material-ui/core';
@@ -8,6 +7,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import FormControl from '@material-ui/core/FormControl';
 import Snackbar from '@material-ui/core/Snackbar';
 import MuiAlert from '@material-ui/lab/Alert';
+import { apiFetch } from '../utils/apiClient';
 
 
 
@@ -32,16 +32,14 @@ const NewPropertyForm = ({ token }) => {
     const [errorMessage, setErrorMessage] = useState('');
 
     useEffect(() => {
-        fetch(`${API_HOST}/auth/users`, {
+        apiFetch('/auth/users', {
             method: 'GET',
             headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
         })
-            .then((response) => response.json())
-            .then((data) => setUsers(data.data || []))
+            .then(({ data }) => setUsers(data.data || []))
             .catch((error) => console.error(error));
     }, [token]);
 
@@ -76,23 +74,17 @@ const NewPropertyForm = ({ token }) => {
         } else {
             delete propertyData.assigned_driver_id;
         }
-        fetch(`${API_HOST}/api/property`, {
+        apiFetch('/api/property', {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify(propertyData),
         })
-            .then(response => {
-                if (response.ok) {
-                    setErrorMessage('');
-                    setOpenSnackbar(true);
-                }
-                return response.json();
-            })
-            .then(data => {
+            .then(({ data }) => {
+                setErrorMessage('');
+                setOpenSnackbar(true);
                 if (data.status === 'fail') {
                     setErrorMessage(data.message || 'Failed to create property.');
                 }

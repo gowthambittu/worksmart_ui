@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Button, TextField, Box } from '@material-ui/core';
 // import { makeStyles } from '@material-ui/core/styles';
 import { format } from 'date-fns';
-import API_HOST from '../config';
 import { Snackbar } from '@material-ui/core';
+import { apiFetch } from '../utils/apiClient';
 
 // const useStyles = makeStyles((theme) => ({
 //     paper: {
@@ -47,25 +47,21 @@ function NewWorkRecord({token, workorderId}) {
         formData.append('work_done_tons', workDone);
         formData.append('is_verified', false);
     
-        fetch(`${API_HOST}/api/work_record`, {
+        apiFetch('/api/work_record', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
             body: formData,
         })
-        .then(response => {
-            if (response.ok) {
-                // setIsSuccess(true);
-                setOpenSnackbar(true); // Open the snackbar
-                // Clear the state variables
-                setWorkDone('');
-                setProofOfWork(null);
-                setWorkDate('');
-            }
-            return response.json();
+        .then(({ data }) => {
+            console.log(data);
+            setOpenSnackbar(true); // Open the snackbar
+            // Clear the state variables
+            setWorkDone('');
+            setProofOfWork(null);
+            setWorkDate('');
         })
-        .then(data => console.log(data))
         .catch((error) => {
             console.error('Error:', error);
         });

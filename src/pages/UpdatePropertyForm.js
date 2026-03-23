@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button, TextField, Grid, Paper, Typography } from '@material-ui/core';
-import API_HOST from '../config';
 import { format } from 'date-fns';
+import { apiFetch } from '../utils/apiClient';
 
 const formatDateForInput = (value) => {
     if (!value) return '';
@@ -54,18 +54,16 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
             payload.purchase_date = format(new Date(payload.purchase_date), 'MM-dd-yyyy');
         }
 
-        fetch(`${API_HOST}/api/property/${propertyData.property_id}`, {
+        apiFetch(`/api/property/${propertyData.property_id}`, {
             method: 'PUT',
             headers: {
-                Accept: 'application/json',
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(payload),
         })
-            .then((response) => response.json().then((data) => ({ ok: response.ok, data })))
-            .then(({ ok, data }) => {
-                if (!ok || data.status === 'fail') {
+            .then(({ data }) => {
+                if (data.status === 'fail') {
                     setErrorMessage(data.message || 'Failed to update property.');
                     return;
                 }

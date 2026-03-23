@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Button, TextField, Box } from '@material-ui/core';
 // import { makeStyles } from '@material-ui/core/styles';
 import { format } from 'date-fns';
-import API_HOST from '../config';
 import { Snackbar } from '@material-ui/core';
+import { apiFetch } from '../utils/apiClient';
 
 // const useStyles = makeStyles((theme) => ({
 //     paper: {
@@ -47,26 +47,22 @@ function NewOutboundRecord({token, workorderId}) {
         formData.append('weight_in_tons', weightInTons);
         formData.append('truck_number', truckNumber);
     
-        fetch(`${API_HOST}/api/outbound_record`, {
+        apiFetch('/api/outbound_record', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
             body: formData,
         })
-        .then(response => {
-            if (response.ok) {
-                // setIsSuccess(true);
-                setOpenSnackbar(true); // Open the snackbar
-                // Clear the state variables
-                setWeightInTons('');
-                setReceiptProof(null);
-                setTruckDate('');
-                setTruckNumber('');
-            }
-            return response.json();
+        .then(({ data }) => {
+            console.log(data);
+            setOpenSnackbar(true); // Open the snackbar
+            // Clear the state variables
+            setWeightInTons('');
+            setReceiptProof(null);
+            setTruckDate('');
+            setTruckNumber('');
         })
-        .then(data => console.log(data))
         .catch((error) => {
             console.error('Error:', error);
         });
