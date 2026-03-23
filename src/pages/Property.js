@@ -69,6 +69,18 @@ const Property = ({ username, authToken }) => {
         assigned_driver_id: '',
     });
     const [assignmentError, setAssignmentError] = useState('');
+    const getImageSrc = (value) => {
+        if (!value || typeof value !== 'string') return '';
+        const normalized = value.trim();
+        if (
+            normalized.startsWith('http://') ||
+            normalized.startsWith('https://') ||
+            normalized.startsWith('data:')
+        ) {
+            return normalized;
+        }
+        return `data:image/jpeg;base64,${normalized}`;
+    };
 
     const zoomIn = (event) => {
         event.stopPropagation(); // Prevent click event from propagating to the dialog
@@ -423,10 +435,10 @@ const Property = ({ username, authToken }) => {
                                                                     <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
                                                                     <TableCell>
                                                                         <img
-                                                                            src={`data:image/jpeg;base64,${record.proof_of_work_file_path}`}
+                                                                            src={getImageSrc(record.proof_of_work_file_path)}
                                                                             alt="Proof of Work"
                                                                             style={{ width: '100px', height: '100px' }}
-                                                                            onClick={() => handleImageClickOpen(`data:image/jpeg;base64,${record.proof_of_work_file_path}`)}
+                                                                            onClick={() => handleImageClickOpen(getImageSrc(record.proof_of_work_file_path))}
                                                                         />
                                                                     </TableCell>
 

@@ -62,6 +62,18 @@ const Outbound = ({ username, authToken }) => {
     const [sortOrder, setSortOrder] = useState('asc');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
+    const getImageSrc = (value) => {
+        if (!value || typeof value !== 'string') return '';
+        const normalized = value.trim();
+        if (
+            normalized.startsWith('http://') ||
+            normalized.startsWith('https://') ||
+            normalized.startsWith('data:')
+        ) {
+            return normalized;
+        }
+        return `data:image/jpeg;base64,${normalized}`;
+    };
 
 
     const handleSort = (outbound) => {
@@ -226,8 +238,14 @@ const Outbound = ({ username, authToken }) => {
 
         filteredRecords.forEach((record, index) => {
 
-            const imageData = `data:image/jpeg;base64,${record.receipt_proof}`
-            imageDoc.addImage(imageData, 'JPEG', 10, position, 185, 140);
+            const imageData = getImageSrc(record.receipt_proof);
+            if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+                imageDoc.setFontSize(11);
+                imageDoc.text('Receipt image URL:', 10, position);
+                imageDoc.textWithLink(imageData, 10, position + 8, { url: imageData });
+            } else {
+                imageDoc.addImage(imageData, 'JPEG', 10, position, 185, 140);
+            }
             position = 50; // Adjust based on your image size
 
 
@@ -393,10 +411,10 @@ const Outbound = ({ username, authToken }) => {
                                         <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell>
                                             <img
-                                                src={`data:image/jpeg;base64,${record.receipt_proof}`}
+                                                src={getImageSrc(record.receipt_proof)}
                                                 alt="Proof of Work"
                                                 style={{ width: '100px', height: '100px' }}
-                                                onClick={() => handleImageClickOpen(`data:image/jpeg;base64,${record.receipt_proof}`)}
+                                                onClick={() => handleImageClickOpen(getImageSrc(record.receipt_proof))}
                                             />
                                         </TableCell>
                                         <TableCell>{record.is_verified ? "Yes" : "No"}</TableCell>

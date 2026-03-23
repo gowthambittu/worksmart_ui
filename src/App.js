@@ -12,13 +12,15 @@ import UserManagement from './pages/UserManagement';
 import Properties from './pages/Properties';
 
 const App = () => {
-  const [token, setToken] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [username, setUsername] = useState(null); // Add this line
-  const [isLogged, setIsLogged] = useState(true)
+  const [token, setToken] = useState(() => localStorage.getItem('authToken'));
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole'));
+  const [username, setUsername] = useState(() => localStorage.getItem('username'));
+  const [isLogged, setIsLogged] = useState(() => !localStorage.getItem('authToken'));
   
   const handleLogin = (authToken, role,username) => {
     localStorage.setItem('authToken', authToken);
+    localStorage.setItem('userRole', role);
+    localStorage.setItem('username', username);
     setToken(authToken); 
     setUserRole(role);
     setUsername(username);
