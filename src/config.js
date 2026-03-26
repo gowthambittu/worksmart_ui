@@ -1,2 +1,2 @@
-const API_HOST = process.env.REACT_APP_API_HOST || 'https://worksmart-backend-insi.onrender.com';
+const API_HOST = process.env.REACT_APP_API_HOST || 'http://localhost:8080';
 export default API_HOST;
