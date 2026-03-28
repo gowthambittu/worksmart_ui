@@ -168,6 +168,12 @@ const Properties = ({ username,authToken }) => {
                                 />
                             </TableCell>
                             <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
+                                Crop
+                            </TableCell>
+                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
+                                Season
+                            </TableCell>
+                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
                                 Location
                                 <InputBase
                                     value={filters.location}
@@ -222,6 +228,8 @@ const Properties = ({ username,authToken }) => {
                             <TableRow key={index}>
                                 <TableCell>{item.property_id}</TableCell>
                                 <TableCell>{item.property_name}</TableCell>
+                                <TableCell>{item.crop_type ? item.crop_type.replace('_', ' ') : '—'}</TableCell>
+                                <TableCell>{item.season || '—'}</TableCell>
                                 <TableCell>{item.location}</TableCell>
                                 <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
                                 <TableCell>{item.estimated_work}</TableCell>

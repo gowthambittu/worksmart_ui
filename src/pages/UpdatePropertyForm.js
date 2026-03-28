@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Button, TextField, Grid, Paper, Typography } from '@material-ui/core';
+import { Select, MenuItem } from '@material-ui/core';
+import InputLabel from '@material-ui/core/InputLabel';
+import FormControl from '@material-ui/core/FormControl';
 import { format } from 'date-fns';
 import { apiFetch } from '../utils/apiClient';
 
@@ -20,6 +23,15 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
         location: '',
         cost_to_labour: '',
         cost_to_driver: '',
+        crop_type: '',
+        crop_variety: '',
+        season: '',
+        harvest_count: '',
+        plant_spacing_ft: '',
+        soil_type: '',
+        is_irrigated: false,
+        irrigation_type: '',
+        fertilizer_type: '',
     });
     const [errorMessage, setErrorMessage] = useState('');
 
@@ -34,6 +46,15 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
             location: propertyData.location ?? '',
             cost_to_labour: propertyData.cost_to_labour ?? '',
             cost_to_driver: propertyData.cost_to_driver ?? '',
+            crop_type: propertyData.crop_type ?? '',
+            crop_variety: propertyData.crop_variety ?? '',
+            season: propertyData.season ?? '',
+            harvest_count: propertyData.harvest_count ?? '',
+            plant_spacing_ft: propertyData.plant_spacing_ft ?? '',
+            soil_type: propertyData.soil_type ?? '',
+            is_irrigated: propertyData.is_irrigated ?? false,
+            irrigation_type: propertyData.irrigation_type ?? '',
+            fertilizer_type: propertyData.fertilizer_type ?? '',
         });
         setErrorMessage('');
     }, [propertyData]);
@@ -98,6 +119,64 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
                         <TextField fullWidth margin="normal" name="location" label="Location" value={property.location} onChange={handleChange} />
                         <TextField fullWidth margin="normal" name="cost_to_labour" label="Cost to Labour" value={property.cost_to_labour} onChange={handleChange} />
                         <TextField fullWidth margin="normal" name="cost_to_driver" label="Cost to Driver" value={property.cost_to_driver} onChange={handleChange} />
+                        <Typography variant="subtitle2" style={{ marginTop: 16, marginBottom: 4, color: '#3B6D11' }}>
+                            Crop & field details (used by ML model)
+                        </Typography>
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Crop type</InputLabel>
+                            <Select name="crop_type" value={property.crop_type} onChange={handleChange}>
+                                <MenuItem value="virginia_tobacco">Virginia tobacco (FCV)</MenuItem>
+                                <MenuItem value="burley_tobacco">Burley tobacco</MenuItem>
+                                <MenuItem value="hdbrg_tobacco">HDBRG tobacco</MenuItem>
+                                <MenuItem value="sugarcane">Sugarcane</MenuItem>
+                                <MenuItem value="other">Other</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <TextField fullWidth margin="normal" name="crop_variety" label="Crop variety (e.g. K-326)" value={property.crop_variety} onChange={handleChange} />
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Season</InputLabel>
+                            <Select name="season" value={property.season} onChange={handleChange}>
+                                <MenuItem value="kharif">Kharif (Jun-Oct)</MenuItem>
+                                <MenuItem value="rabi">Rabi (Nov-Mar)</MenuItem>
+                                <MenuItem value="summer">Summer (Feb-May)</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <TextField fullWidth margin="normal" name="harvest_count" label="Previous harvest count" type="number" value={property.harvest_count} onChange={handleChange} />
+                        <TextField fullWidth margin="normal" name="plant_spacing_ft" label="Plant spacing (feet)" type="number" value={property.plant_spacing_ft} onChange={handleChange} />
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Soil type</InputLabel>
+                            <Select name="soil_type" value={property.soil_type} onChange={handleChange}>
+                                <MenuItem value="black_cotton">Black cotton</MenuItem>
+                                <MenuItem value="red_sandy">Red sandy</MenuItem>
+                                <MenuItem value="clay_loam">Clay loam</MenuItem>
+                                <MenuItem value="sandy_loam">Sandy loam</MenuItem>
+                                <MenuItem value="alluvial">Alluvial</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Irrigation type</InputLabel>
+                            <Select name="irrigation_type" value={property.irrigation_type} onChange={handleChange}>
+                                <MenuItem value="drip">Drip irrigation</MenuItem>
+                                <MenuItem value="flood">Flood irrigation</MenuItem>
+                                <MenuItem value="rain_fed">Rain-fed only</MenuItem>
+                                <MenuItem value="sprinkler">Sprinkler</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Fertilizer type</InputLabel>
+                            <Select name="fertilizer_type" value={property.fertilizer_type} onChange={handleChange}>
+                                <MenuItem value="chemical">Chemical (NPK)</MenuItem>
+                                <MenuItem value="organic">Organic</MenuItem>
+                                <MenuItem value="mixed">Mixed</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth margin="normal">
+                            <InputLabel>Is irrigated?</InputLabel>
+                            <Select name="is_irrigated" value={property.is_irrigated} onChange={handleChange}>
+                                <MenuItem value={true}>Yes</MenuItem>
+                                <MenuItem value={false}>No</MenuItem>
+                            </Select>
+                        </FormControl>
                         {errorMessage && (
                             <Typography color="error" style={{ marginTop: 8 }}>
                                 {errorMessage}
