@@ -1,59 +1,148 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import Layout from './Layout';
 import { apiFetch } from '../utils/apiClient';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TableSortLabel, InputBase, TablePagination } from '@material-ui/core';
-
-import { Button } from '@material-ui/core';
+import {
+    Paper,
+    Typography,
+    Button,
+    InputBase,
+    Select,
+    MenuItem,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    LinearProgress,
+} from '@material-ui/core';
+import useMediaQuery from '@material-ui/core/useMediaQuery';
 
 import NewPropertyForm from './NewPropertyForm';
 import UpdatePropertyForm from './UpdatePropertyForm';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import { Link } from 'react-router-dom';
-// import { makeStyles } from '@material-ui/core/styles';
 
-// const useStyles = makeStyles((theme) => ({
-//     navbar: {
-//       backgroundColor: '#131921',
-//       height: '50px',
-//     },
-//     toolbar: {
-//         display: 'flex',
-//         justifyContent: 'flex-start',
-//       },
-//       button: {
-//         color: '#FFFFFF',
-//         fontWeight: 'bold',
-//         fontSize: '1.2em',
-//         margin: theme.spacing(1),
-//         '&:hover': {
-//           backgroundColor: 'rgba(255, 255, 255, 0.1)',
-//         },
-//       },
-//   }));
+const styles = {
+    page: { padding: 16 },
+    card: {
+        borderRadius: 14,
+        border: '1px solid #d8decd',
+        background: '#ffffff',
+        padding: 16,
+    },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+    title: { fontWeight: 700, color: '#24321a' },
+    addBtn: {
+        background: '#EAF3DE',
+        color: '#3B6D11',
+        border: '1px solid #97C459',
+        borderRadius: 10,
+        textTransform: 'none',
+        fontWeight: 600,
+    },
+    searchRow: { display: 'grid', gridTemplateColumns: '1fr 180px 180px', gap: 10, marginBottom: 14 },
+    rowHeader: {
+        display: 'grid',
+        gridTemplateColumns: '2fr 1.4fr 0.8fr 1.2fr 0.9fr 120px',
+        gap: 8,
+        borderBottom: '1px solid #e7eadf',
+        paddingBottom: 8,
+        color: '#6f7667',
+        fontSize: 12,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+    },
+    row: {
+        display: 'grid',
+        gridTemplateColumns: '2fr 1.4fr 0.8fr 1.2fr 0.9fr 120px',
+        gap: 8,
+        alignItems: 'center',
+        borderBottom: '1px solid #eef1e8',
+        padding: '12px 0',
+    },
+    propertyName: { fontWeight: 700, color: '#22301a', fontSize: 16 },
+    meta: { fontSize: 12, color: '#6f7667', marginTop: 2 },
+    actions: { display: 'flex', gap: 8 },
+    badge: {
+        display: 'inline-block',
+        padding: '4px 10px',
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 600,
+    },
+};
 
-const Properties = ({ username,authToken }) => {
+const humanizeValue = (value) => {
+    if (!value) return '—';
+    return String(value)
+        .split('_')
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+};
+
+const getStatus = (item) => {
+    const estimated = Number(item.estimated_work || 0);
+    const completed = Number(item.completed_work || 0);
+    if (estimated > 0 && completed >= estimated) {
+        return { label: 'Completed', color: '#0C447C', bg: '#E6F1FB' };
+    }
+    if (completed > 0) {
+        return { label: 'In progress', color: '#633806', bg: '#FAEEDA' };
+    }
+    return { label: 'Active', color: '#3B6D11', bg: '#EAF3DE' };
+};
+
+const Properties = ({ username, authToken }) => {
     const [data, setData] = useState([]);
-    const [filters, setFilters] = useState({ property_id:'',property_name: '', location: '', created_at: '' });
-    const [sort, setSort] = useState(null);
-    const [sortOrder, setSortOrder] = useState('asc');
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
-    const navigate = useNavigate();
-    // const [redirectToNewProperty, setRedirectToNewProperty] = useState(false);
+    const [searchText, setSearchText] = useState('');
+    const [seasonFilter, setSeasonFilter] = useState('all');
+    const [cropFilter, setCropFilter] = useState('all');
     const [open, setOpen] = useState(false);
     const [openUpdate, setOpenUpdate] = useState(false);
     const [selectedProperty, setSelectedProperty] = useState(null);
     const [refreshData, setRefreshData] = useState(false);
-    // const classes = useStyles();
+    const navigate = useNavigate();
+    const isMobile = useMediaQuery('(max-width:900px)');
 
+    useEffect(() => {
+        apiFetch('/api/property', {
+            headers: { Authorization: `Bearer ${authToken}` },
+        })
+            .then(({ data }) => {
+                setData(data.data || []);
+            })
+            .catch(() => {
+                navigate('/login');
+            });
+    }, [navigate, refreshData, authToken]);
+
+    const seasons = useMemo(() => {
+        const set = new Set((data || []).map((item) => item.season).filter(Boolean));
+        return Array.from(set);
+    }, [data]);
+
+    const crops = useMemo(() => {
+        const set = new Set((data || []).map((item) => item.crop_type).filter(Boolean));
+        return Array.from(set);
+    }, [data]);
+
+    const filteredData = useMemo(() => {
+        return (data || []).filter((item) => {
+            const name = String(item.property_name || '').toLowerCase();
+            const location = String(item.location || '').toLowerCase();
+            const q = searchText.toLowerCase();
+            const matchesSearch = !q || name.includes(q) || location.includes(q);
+            const matchesSeason = seasonFilter === 'all' || item.season === seasonFilter;
+            const matchesCrop = cropFilter === 'all' || item.crop_type === cropFilter;
+            return matchesSearch && matchesSeason && matchesCrop;
+        });
+    }, [data, searchText, seasonFilter, cropFilter]);
 
     const handleClose = () => {
         setOpen(false);
-        setRefreshData(!refreshData)
+    };
+
+    const handleCreateSuccess = () => {
+        setOpen(false);
+        setRefreshData((prev) => !prev);
     };
 
     const handleAddProperty = () => {
@@ -73,238 +162,197 @@ const Properties = ({ username,authToken }) => {
     const handleUpdateSuccess = () => {
         setOpenUpdate(false);
         setSelectedProperty(null);
-        setRefreshData(!refreshData);
+        setRefreshData((prev) => !prev);
     };
-
-    const handleSort = (property) => {
-        const isAsc = sort === property && sortOrder === 'asc';
-        setSort(property);
-        setSortOrder(isAsc ? 'desc' : 'asc');
-    };
-
-    const handleFilterChange = (property) => (event) => {
-        setFilters({ ...filters, [property]: event.target.value });
-    };
-
-    useEffect(() => {
-        apiFetch('/api/property', {
-            headers: {
-                Authorization: `Bearer ${authToken}`
-            },
-        })
-            .then(({ data }) => {
-                setData(data.data);
-            })
-            .catch(() => {
-                navigate('/login');
-            });
-    }, [navigate,refreshData,authToken]);
-
-    let filteredData = data;
-    Object.keys(filters).forEach((key) => {
-        filteredData = filteredData.filter(item => {
-            // Convert item[key] to string if it's not already a string, to safely call toLowerCase
-            const itemValue = String(item[key]).toLowerCase();
-            const filterValue = String(filters[key]).toLowerCase();
-            return itemValue.includes(filterValue);
-        });
-    });
-    if (sort) {
-        filteredData = filteredData.sort((a, b) => {
-            const aValue = a[sort];
-            const bValue = b[sort];
-          
-            // Check if the values are numbers
-            if (typeof aValue === 'number' && typeof bValue === 'number') {
-              return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-            }
-          
-            // Assume the values are strings if not numbers
-            return sortOrder === 'asc' ? 
-                   aValue.toString().localeCompare(bValue.toString()) : 
-                   bValue.toString().localeCompare(aValue.toString());
-          });
-    }
-
 
     return (
         <Layout username={username}>
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '7vh' }}>
-                <h1 style={{ color: 'green', fontSize: '1.5em' }}>Properties</h1>
-            </div>
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>
-                                <TableSortLabel
-                                    active={sort === 'property_id'}
-                                    direction={sortOrder}
-                                    onClick={() => handleSort('property_id')}
-                                    style={{ fontWeight: 'bold', fontSize: '1.2em' }}
-                                >
-                                    Property ID
-                                </TableSortLabel>
-                                <InputBase
-                                    value={filters.property_id}
-                                    onChange={handleFilterChange('property_id')}
-                                    placeholder="Filter by property id"
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <TableSortLabel
-                                    active={sort === 'property_name'}
-                                    direction={sortOrder}
-                                    onClick={() => handleSort('property_name')}
-                                    style={{ fontWeight: 'bold', fontSize: '1.2em' }}
-                                >
-                                    Property Name
-                                </TableSortLabel>
-                                <InputBase
-                                    value={filters.property_name}
-                                    onChange={handleFilterChange('property_name')}
-                                    placeholder="Filter by property name"
-                                />
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
-                                Crop
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
-                                Season
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
-                                Location
-                                <InputBase
-                                    value={filters.location}
-                                    onChange={handleFilterChange('location')}
-                                    placeholder="Filter by location"
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <TableSortLabel
-                                    active={sort === 'created_at'}
-                                    direction={sortOrder}
-                                    onClick={() => handleSort('created_at')}
-                                    style={{ fontWeight: 'bold', fontSize: '1.2em' }}
-                                >
-                                    Creation Date
-                                </TableSortLabel>
-                                <InputBase
-                                    value={filters.created_at}
-                                    onChange={handleFilterChange('created_at')}
-                                    placeholder="Filter by creation date"
-                                />
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
-                                Estimated Work
-                                <InputBase
-                                    value={filters.estimated_work}
-                                    onChange={handleFilterChange('estimated_work')}
-                                    placeholder="Filter by estimated work"
-                                />
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
-                                Completed Work
-                                <InputBase
-                                    value={filters.completed_work}
-                                    onChange={handleFilterChange('completed_work')}
-                                    placeholder="Filter by completed work"
-                                />
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
-                                Area of Acres
-                                <InputBase
-                                    value={filters.area_of_acres}
-                                    onChange={handleFilterChange('area_of_acres')}
-                                    placeholder="Filter by area of acres"
-                                />
-                            </TableCell>
-                            <TableCell style={{ fontWeight: 'bold', fontSize: '1.2em' }}>Action</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item, index) => (
-                            <TableRow key={index}>
-                                <TableCell>{item.property_id}</TableCell>
-                                <TableCell>{item.property_name}</TableCell>
-                                <TableCell>{item.crop_type ? item.crop_type.replace('_', ' ') : '—'}</TableCell>
-                                <TableCell>{item.season || '—'}</TableCell>
-                                <TableCell>{item.location}</TableCell>
-                                <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
-                                <TableCell>{item.estimated_work}</TableCell>
-                                <TableCell>{item.completed_work}</TableCell>
-                                <TableCell>{item.land_area_acres}</TableCell>
-                                <TableCell>
-                                    <div style={{ display: 'flex', flexDirection: 'row', gap: 8, flexWrap: 'nowrap', alignItems: 'center' }}>
+            <div style={styles.page}>
+                <Paper style={styles.card}>
+                    <div style={styles.header}>
+                        <Typography variant="h5" style={styles.title}>Properties</Typography>
+                        <Button style={styles.addBtn} onClick={handleAddProperty}>+ Add property</Button>
+                    </div>
+
+                    <div
+                        style={{
+                            ...styles.searchRow,
+                            gridTemplateColumns: isMobile ? '1fr' : styles.searchRow.gridTemplateColumns,
+                        }}
+                    >
+                        <InputBase
+                            value={searchText}
+                            onChange={(event) => setSearchText(event.target.value)}
+                            placeholder="Search by name or location..."
+                            style={{ border: '1px solid #dfe5d2', borderRadius: 10, padding: '10px 12px' }}
+                        />
+                        <Select
+                            value={seasonFilter}
+                            onChange={(event) => setSeasonFilter(event.target.value)}
+                            style={{ border: '1px solid #dfe5d2', borderRadius: 10, paddingLeft: 8 }}
+                            displayEmpty
+                        >
+                            <MenuItem value="all">All seasons</MenuItem>
+                            {seasons.map((season) => (
+                                <MenuItem key={season} value={season}>{humanizeValue(season)}</MenuItem>
+                            ))}
+                        </Select>
+                        <Select
+                            value={cropFilter}
+                            onChange={(event) => setCropFilter(event.target.value)}
+                            style={{ border: '1px solid #dfe5d2', borderRadius: 10, paddingLeft: 8 }}
+                            displayEmpty
+                        >
+                            <MenuItem value="all">All crops</MenuItem>
+                            {crops.map((crop) => (
+                                <MenuItem key={crop} value={crop}>{humanizeValue(crop)}</MenuItem>
+                            ))}
+                        </Select>
+                    </div>
+
+                    {!isMobile && (
+                        <div style={styles.rowHeader}>
+                            <div>Property</div>
+                            <div>Crop</div>
+                            <div>Area</div>
+                            <div>Progress</div>
+                            <div>Status</div>
+                            <div>Actions</div>
+                        </div>
+                    )}
+
+                    {filteredData.map((item) => {
+                        const estimated = Number(item.estimated_work || 0);
+                        const completed = Number(item.completed_work || 0);
+                        const progress = estimated > 0 ? Math.min(100, Math.round((completed / estimated) * 100)) : 0;
+                        const status = getStatus(item);
+
+                        if (isMobile) {
+                            return (
+                                <Paper key={item.property_id} style={{ padding: 12, marginTop: 10, border: '1px solid #ecf0e5' }}>
+                                    <div style={styles.propertyName}>{item.property_name}</div>
+                                    <div style={styles.meta}>
+                                        {item.location || 'Unknown location'} · {humanizeValue(item.soil_type)} · {item.is_irrigated ? 'Irrigated' : 'Rain-fed'}
+                                    </div>
+                                    <div style={{ ...styles.meta, marginTop: 8 }}>
+                                        {humanizeValue(item.crop_type)} · {humanizeValue(item.season)}
+                                    </div>
+                                    <div style={{ ...styles.meta, marginTop: 8 }}>
+                                        Area: {item.land_area_acres ? `${item.land_area_acres} ac` : '—'}
+                                    </div>
+                                    <div style={{ ...styles.meta, marginTop: 6 }}>{progress}% · {completed || 0}/{estimated || 0}t</div>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={progress}
+                                        style={{ height: 6, borderRadius: 6, background: '#ecefe6', marginTop: 4 }}
+                                    />
+                                    <div style={{ marginTop: 10 }}>
+                                        <span style={{ ...styles.badge, color: status.color, background: status.bg }}>{status.label}</span>
+                                    </div>
+                                    <div style={{ ...styles.actions, marginTop: 10 }}>
+                                        <Button
+                                            component={Link}
+                                            to={`/adminView/property/${item.property_id}`}
+                                            variant="contained"
+                                            size="small"
+                                            style={{ backgroundColor: '#E6F1FB', color: '#0C447C', minWidth: 52, textTransform: 'none' }}
+                                        >
+                                            View
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleOpenUpdate(item)}
+                                            variant="outlined"
+                                            size="small"
+                                            style={{ minWidth: 52, textTransform: 'none' }}
+                                        >
+                                            Edit
+                                        </Button>
+                                    </div>
+                                </Paper>
+                            );
+                        }
+
+                        return (
+                            <div key={item.property_id} style={styles.row}>
+                                <div>
+                                    <div style={styles.propertyName}>{item.property_name}</div>
+                                    <div style={styles.meta}>
+                                        {item.location || 'Unknown location'} · {humanizeValue(item.soil_type)} · {item.is_irrigated ? 'Irrigated' : 'Rain-fed'}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style={{ fontSize: 14, color: '#1f2a17' }}>{humanizeValue(item.crop_type)}</div>
+                                    <div style={styles.meta}>{humanizeValue(item.season)}</div>
+                                </div>
+
+                                <div style={{ fontSize: 15, fontWeight: 600, color: '#1f2a17' }}>
+                                    {item.land_area_acres ? `${item.land_area_acres} ac` : '—'}
+                                </div>
+
+                                <div>
+                                    <div style={styles.meta}>{progress}% · {completed || 0}/{estimated || 0}t</div>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={progress}
+                                        style={{ height: 6, borderRadius: 6, background: '#ecefe6', marginTop: 4 }}
+                                    />
+                                </div>
+
+                                <div>
+                                    <span style={{ ...styles.badge, color: status.color, background: status.bg }}>{status.label}</span>
+                                </div>
+
+                                <div style={styles.actions}>
                                     <Button
                                         component={Link}
                                         to={`/adminView/property/${item.property_id}`}
                                         variant="contained"
                                         size="small"
-                                        style={{ backgroundColor: '#1976d2', color: '#fff', minWidth: 72 }}
+                                        style={{ backgroundColor: '#E6F1FB', color: '#0C447C', minWidth: 52, textTransform: 'none' }}
                                     >
                                         View
                                     </Button>
                                     <Button
                                         onClick={() => handleOpenUpdate(item)}
-                                        variant="contained"
+                                        variant="outlined"
                                         size="small"
-                                        style={{ backgroundColor: '#2e7d32', color: '#fff', minWidth: 72 }}
+                                        style={{ minWidth: 52, textTransform: 'none' }}
                                     >
-                                        Update
+                                        Edit
                                     </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                <TablePagination
-                    component="div"
-                    count={filteredData.length}
-                    page={page}
-                    onPageChange={(event, newPage) => setPage(newPage)}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={(event) => {
-                        setRowsPerPage(parseInt(event.target.value, '10'));
-                        setPage(0);
-                    }}
-                />
+                                </div>
+                            </div>
+                        );
+                    })}
 
-            </TableContainer>
-            <div>
-                <Button variant="outlined" color="primary" onClick={handleAddProperty}>
-                    Add Property
-                </Button>
-                <Dialog maxWidth="sm" open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
+                    {filteredData.length === 0 && (
+                        <Typography style={{ color: '#6f7667', marginTop: 16 }}>
+                            No properties match the current filters.
+                        </Typography>
+                    )}
+                </Paper>
+
+                <Dialog maxWidth="md" fullWidth open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
                     <DialogTitle id="form-dialog-title">Add New Property</DialogTitle>
                     <DialogContent>
-                        <NewPropertyForm token={authToken} />
+                        <NewPropertyForm token={authToken} onSuccess={handleCreateSuccess} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleClose} color="primary">
-                            Cancel
-                        </Button>
+                        <Button onClick={handleClose} color="primary">Cancel</Button>
                     </DialogActions>
                 </Dialog>
-                <Dialog maxWidth="sm" open={openUpdate} onClose={handleCloseUpdate} aria-labelledby="update-form-dialog-title">
+
+                <Dialog maxWidth="md" fullWidth open={openUpdate} onClose={handleCloseUpdate} aria-labelledby="update-form-dialog-title">
                     <DialogTitle id="update-form-dialog-title">Update Property</DialogTitle>
                     <DialogContent>
-                        <UpdatePropertyForm
-                            token={authToken}
-                            propertyData={selectedProperty}
-                            onSuccess={handleUpdateSuccess}
-                        />
+                        <UpdatePropertyForm token={authToken} propertyData={selectedProperty} onSuccess={handleUpdateSuccess} />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={handleCloseUpdate} color="primary">
-                            Cancel
-                        </Button>
+                        <Button onClick={handleCloseUpdate} color="primary">Cancel</Button>
                     </DialogActions>
                 </Dialog>
             </div>
-        </div>
         </Layout>
     );
 };

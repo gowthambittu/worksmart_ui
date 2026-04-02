@@ -1,18 +1,51 @@
-import React, { useState } from 'react';
-import { Button, TextField, Grid, Paper, Typography } from '@material-ui/core';
-import { format } from 'date-fns';
-import { useEffect } from 'react';
-import { Select, MenuItem } from '@material-ui/core';
-import InputLabel from '@material-ui/core/InputLabel';
-import FormControl from '@material-ui/core/FormControl';
-import Snackbar from '@material-ui/core/Snackbar';
+import React, { useEffect, useState } from 'react';
+import {
+    Button,
+    TextField,
+    Grid,
+    Paper,
+    Typography,
+    Select,
+    MenuItem,
+    InputLabel,
+    FormControl,
+    Switch,
+    FormControlLabel,
+    Snackbar,
+} from '@material-ui/core';
 import MuiAlert from '@material-ui/lab/Alert';
+import { format } from 'date-fns';
 import { apiFetch } from '../utils/apiClient';
 
+const sectionTitleStyle = {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#4a5242',
+    marginTop: 14,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottom: '1px solid #e4e8db',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+};
 
+const mlTagStyle = {
+    fontSize: 10,
+    color: '#3B6D11',
+    background: '#EAF3DE',
+    border: '1px dashed #97C459',
+    borderRadius: 999,
+    padding: '2px 8px',
+};
 
+const toNumberOrNull = (value) => {
+    if (value === '' || value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+};
 
-const NewPropertyForm = ({ token }) => {
+const NewPropertyForm = ({ token, onSuccess }) => {
     const [property, setProperty] = useState({
         property_name: '',
         estimated_work: '',
@@ -25,7 +58,6 @@ const NewPropertyForm = ({ token }) => {
         cost_to_labour: '',
         cost_to_driver: '',
         crop_type: '',
-        crop_variety: '',
         season: '',
         harvest_count: '',
         plant_spacing_ft: '',
@@ -33,12 +65,14 @@ const NewPropertyForm = ({ token }) => {
         is_irrigated: false,
         irrigation_type: '',
         fertilizer_type: '',
+        avg_yield_per_acre: '',
     });
 
-    // const [isSuccess, setIsSuccess] = useState(false);
     const [users, setUsers] = useState([]);
     const [openSnackbar, setOpenSnackbar] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [snackbarMessage, setSnackbarMessage] = useState('Success!');
 
     useEffect(() => {
         apiFetch('/auth/users', {
@@ -53,54 +87,82 @@ const NewPropertyForm = ({ token }) => {
     }, [token]);
 
     const handleChange = (event) => {
+        const { name } = event.target;
         let value = event.target.value;
-        if (event.target.name === 'purchase_date') {
+        if (name === 'purchase_date') {
             value = format(new Date(value), 'MM-dd-yyyy');
         }
-        setProperty({
-            ...property,
-            [event.target.name]: value,
-        });
+        if (name === 'is_irrigated') {
+            value = value === true || value === 'true';
+        }
+        setProperty((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleToggleIrrigated = (event) => {
+        setProperty((prev) => ({ ...prev, is_irrigated: event.target.checked }));
     };
 
     const handleSubmit = (event) => {
         event.preventDefault();
+
         if (!property.assigned_labour_id && !property.assigned_driver_id) {
             setErrorMessage('Please assign at least one user group (labour or driver).');
             return;
         }
-        let propertyData = { ...property };
-        if (propertyData.purchase_date) {
-            propertyData.purchase_date = format(new Date(propertyData.purchase_date), 'MM-dd-yyyy');
+
+        const payload = { ...property };
+
+        if (payload.purchase_date) {
+            payload.purchase_date = format(new Date(payload.purchase_date), 'MM-dd-yyyy');
         }
-        if (propertyData.assigned_labour_id) {
-            propertyData.assigned_labour_id = Number(propertyData.assigned_labour_id);
+
+        payload.estimated_work = toNumberOrNull(payload.estimated_work);
+        payload.land_area_acres = toNumberOrNull(payload.land_area_acres);
+        payload.purchase_cost = toNumberOrNull(payload.purchase_cost);
+        payload.cost_to_labour = toNumberOrNull(payload.cost_to_labour);
+        payload.cost_to_driver = toNumberOrNull(payload.cost_to_driver);
+        payload.harvest_count = toNumberOrNull(payload.harvest_count);
+        payload.plant_spacing_ft = toNumberOrNull(payload.plant_spacing_ft);
+        payload.avg_yield_per_acre = toNumberOrNull(payload.avg_yield_per_acre);
+
+        if (payload.assigned_labour_id) {
+            payload.assigned_labour_id = Number(payload.assigned_labour_id);
         } else {
-            delete propertyData.assigned_labour_id;
+            delete payload.assigned_labour_id;
         }
-        if (propertyData.assigned_driver_id) {
-            propertyData.assigned_driver_id = Number(propertyData.assigned_driver_id);
+        if (payload.assigned_driver_id) {
+            payload.assigned_driver_id = Number(payload.assigned_driver_id);
         } else {
-            delete propertyData.assigned_driver_id;
+            delete payload.assigned_driver_id;
         }
+
         apiFetch('/api/property', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify(propertyData),
+            body: JSON.stringify(payload),
         })
             .then(({ data }) => {
                 setErrorMessage('');
-                setOpenSnackbar(true);
                 if (data.status === 'fail') {
+                    setSnackbarSeverity('error');
+                    setSnackbarMessage(data.message || 'Failed to create property.');
                     setErrorMessage(data.message || 'Failed to create property.');
+                } else {
+                    setSnackbarSeverity('success');
+                    setSnackbarMessage('Property created successfully.');
+                    if (onSuccess) onSuccess();
                 }
+                setOpenSnackbar(true);
             })
             .catch((error) => {
                 console.error('Error:', error);
                 setErrorMessage('Failed to create property.');
+                setSnackbarSeverity('error');
+                setSnackbarMessage('Failed to create property.');
+                setOpenSnackbar(true);
             });
     };
 
@@ -109,130 +171,155 @@ const NewPropertyForm = ({ token }) => {
 
     return (
         <Grid container justify="center">
-            <Grid item xs={12} sm={8} md={10}>
-                <Paper style={{ padding: 16 }}>
-                    <Typography variant="h6" align="center">New Property</Typography>
+            <Grid item xs={12}>
+                <Paper style={{ padding: 16, borderRadius: 12, border: '1px solid #d8decd' }}>
+                    <Typography variant="h6" align="center" style={{ fontWeight: 700, color: '#24321a', marginBottom: 8 }}>
+                        New Property
+                    </Typography>
+
                     <form onSubmit={handleSubmit}>
-                        <TextField fullWidth margin="normal" name="property_name" label="Property Name" onChange={handleChange} />
-                        <TextField fullWidth margin="normal" name="estimated_work" label="Estimated Work(Tons)" onChange={handleChange} />
-                        <TextField fullWidth margin="normal" name="land_area_acres" label="Land Area (Acres)" onChange={handleChange} />
-                        <TextField fullWidth margin="normal" name="purchase_cost" label="Purchase Cost (Rupees)" onChange={handleChange} />
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            name="purchase_date"
-                            label="Purchase Date"
-                            type="date"
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
-                            onChange={handleChange}
-                        />
-                        <TextField fullWidth margin="normal" name="location" label="Location" onChange={handleChange} />
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel id="assigned_labour_id-label">Assign Labour (Optional)</InputLabel>
-                            <Select
-                                labelId="assigned_labour_id-label"
-                                fullWidth
-                                name="assigned_labour_id"
-                                onChange={handleChange}
-                                value={property.assigned_labour_id}
-                            >
-                                {labourUsers.map((user) => (
-                                    <MenuItem key={user.user_id} value={user.user_id.toString()}>
-                                        {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel id="assigned_driver_id-label">Assign Driver (Optional)</InputLabel>
-                            <Select
-                                labelId="assigned_driver_id-label"
-                                fullWidth
-                                name="assigned_driver_id"
-                                onChange={handleChange}
-                                value={property.assigned_driver_id}
-                            >
-                                {driverUsers.map((user) => (
-                                    <MenuItem key={user.user_id} value={user.user_id.toString()}>
-                                        {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <TextField fullWidth margin="normal" name="cost_to_labour" label="Cost to Labour" onChange={handleChange} />
-                        <TextField fullWidth margin="normal" name="cost_to_driver" label="Cost to Driver" onChange={handleChange} />
-                        <Typography variant="subtitle2" style={{ marginTop: 16, marginBottom: 4, color: '#3B6D11' }}>
-                            Crop & field details (used by ML model)
+                        <Typography style={sectionTitleStyle}>Basic details</Typography>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="property_name" label="Property name" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="location" label="Location / village" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="land_area_acres" label="Land area (acres)" type="number" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField fullWidth name="purchase_date" label="Purchase date" type="date" InputLabelProps={{ shrink: true }} onChange={handleChange} />
+                            </Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="purchase_cost" label="Purchase cost (Rs)" type="number" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="estimated_work" label="Estimated work (tons)" type="number" onChange={handleChange} /></Grid>
+                        </Grid>
+
+                        <Typography style={sectionTitleStyle}>
+                            Crop & field details
+                            <span style={mlTagStyle}>used by ML</span>
                         </Typography>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Crop type</InputLabel>
-                            <Select name="crop_type" value={property.crop_type} onChange={handleChange}>
-                                <MenuItem value="virginia_tobacco">Virginia tobacco (FCV)</MenuItem>
-                                <MenuItem value="burley_tobacco">Burley tobacco</MenuItem>
-                                <MenuItem value="hdbrg_tobacco">HDBRG tobacco</MenuItem>
-                                <MenuItem value="sugarcane">Sugarcane</MenuItem>
-                                <MenuItem value="other">Other</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <TextField fullWidth margin="normal" name="crop_variety" label="Crop variety (e.g. K-326)" value={property.crop_variety} onChange={handleChange} />
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Season</InputLabel>
-                            <Select name="season" value={property.season} onChange={handleChange}>
-                                <MenuItem value="kharif">Kharif (Jun-Oct)</MenuItem>
-                                <MenuItem value="rabi">Rabi (Nov-Mar)</MenuItem>
-                                <MenuItem value="summer">Summer (Feb-May)</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <TextField fullWidth margin="normal" name="harvest_count" label="Previous harvest count" type="number" value={property.harvest_count} onChange={handleChange} />
-                        <TextField fullWidth margin="normal" name="plant_spacing_ft" label="Plant spacing (feet)" type="number" value={property.plant_spacing_ft} onChange={handleChange} />
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Soil type</InputLabel>
-                            <Select name="soil_type" value={property.soil_type} onChange={handleChange}>
-                                <MenuItem value="black_cotton">Black cotton</MenuItem>
-                                <MenuItem value="red_sandy">Red sandy</MenuItem>
-                                <MenuItem value="clay_loam">Clay loam</MenuItem>
-                                <MenuItem value="sandy_loam">Sandy loam</MenuItem>
-                                <MenuItem value="alluvial">Alluvial</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Irrigation type</InputLabel>
-                            <Select name="irrigation_type" value={property.irrigation_type} onChange={handleChange}>
-                                <MenuItem value="drip">Drip irrigation</MenuItem>
-                                <MenuItem value="flood">Flood irrigation</MenuItem>
-                                <MenuItem value="rain_fed">Rain-fed only</MenuItem>
-                                <MenuItem value="sprinkler">Sprinkler</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Fertilizer type</InputLabel>
-                            <Select name="fertilizer_type" value={property.fertilizer_type} onChange={handleChange}>
-                                <MenuItem value="chemical">Chemical (NPK)</MenuItem>
-                                <MenuItem value="organic">Organic</MenuItem>
-                                <MenuItem value="mixed">Mixed</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl fullWidth margin="normal">
-                            <InputLabel>Is irrigated?</InputLabel>
-                            <Select name="is_irrigated" value={property.is_irrigated} onChange={handleChange}>
-                                <MenuItem value={true}>Yes</MenuItem>
-                                <MenuItem value={false}>No</MenuItem>
-                            </Select>
-                        </FormControl>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Crop type</InputLabel>
+                                    <Select name="crop_type" value={property.crop_type} onChange={handleChange}>
+                                        <MenuItem value="subabul">Subabul</MenuItem>
+                                        <MenuItem value="eucalyptus">Eucalyptus</MenuItem>
+                                        <MenuItem value="other">Other</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Season</InputLabel>
+                                    <Select name="season" value={property.season} onChange={handleChange}>
+                                        <MenuItem value="kharif">Kharif (Jun-Oct)</MenuItem>
+                                        <MenuItem value="rabi">Rabi (Nov-Mar)</MenuItem>
+                                        <MenuItem value="summer">Summer (Feb-May)</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="harvest_count" label="Harvest count (previous seasons)" type="number" value={property.harvest_count} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="plant_spacing_ft" label="Plant spacing (feet)" type="number" value={property.plant_spacing_ft} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Soil type</InputLabel>
+                                    <Select name="soil_type" value={property.soil_type} onChange={handleChange}>
+                                        <MenuItem value="black_cotton">Black cotton</MenuItem>
+                                        <MenuItem value="red_sandy">Red sandy</MenuItem>
+                                        <MenuItem value="clay_loam">Clay loam</MenuItem>
+                                        <MenuItem value="sandy_loam">Sandy loam</MenuItem>
+                                        <MenuItem value="alluvial">Alluvial</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Fertilizer type</InputLabel>
+                                    <Select name="fertilizer_type" value={property.fertilizer_type} onChange={handleChange}>
+                                        <MenuItem value="chemical">Chemical (NPK)</MenuItem>
+                                        <MenuItem value="organic">Organic</MenuItem>
+                                        <MenuItem value="mixed">Mixed</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <FormControl fullWidth>
+                                    <InputLabel>Irrigation type</InputLabel>
+                                    <Select name="irrigation_type" value={property.irrigation_type} onChange={handleChange}>
+                                        <MenuItem value="drip">Drip irrigation</MenuItem>
+                                        <MenuItem value="flood">Flood irrigation</MenuItem>
+                                        <MenuItem value="rain_fed">Rain-fed only</MenuItem>
+                                        <MenuItem value="sprinkler">Sprinkler</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={4}>
+                                <TextField
+                                    fullWidth
+                                    name="avg_yield_per_acre"
+                                    label="Avg yield / acre (tons)"
+                                    value={property.avg_yield_per_acre}
+                                    onChange={handleChange}
+                                    InputProps={{ readOnly: true }}
+                                    placeholder="Auto from history"
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <FormControlLabel
+                                    control={<Switch checked={Boolean(property.is_irrigated)} onChange={handleToggleIrrigated} color="primary" />}
+                                    label="Irrigated land (water-fed / irrigated)"
+                                />
+                            </Grid>
+                        </Grid>
+
+                        <Typography style={sectionTitleStyle}>Labour & cost</Typography>
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="assigned_labour_id-label">Assign labour (optional)</InputLabel>
+                                    <Select labelId="assigned_labour_id-label" name="assigned_labour_id" onChange={handleChange} value={property.assigned_labour_id}>
+                                        {labourUsers.map((user) => (
+                                            <MenuItem key={user.user_id} value={user.user_id.toString()}>
+                                                {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <FormControl fullWidth>
+                                    <InputLabel id="assigned_driver_id-label">Assign driver (optional)</InputLabel>
+                                    <Select labelId="assigned_driver_id-label" name="assigned_driver_id" onChange={handleChange} value={property.assigned_driver_id}>
+                                        {driverUsers.map((user) => (
+                                            <MenuItem key={user.user_id} value={user.user_id.toString()}>
+                                                {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_labour" label="Cost to labour (Rs/ton)" type="number" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_driver" label="Cost to driver (Rs/ton)" type="number" onChange={handleChange} /></Grid>
+                        </Grid>
+
                         {errorMessage && (
                             <Typography color="error" style={{ marginTop: 8 }}>
                                 {errorMessage}
                             </Typography>
                         )}
-                        <Button type="submit" variant="contained" color="primary" fullWidth style={{ marginTop: 16 }}>Save</Button>
+
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            fullWidth
+                            style={{ marginTop: 16, background: '#1a1f2e', color: '#fff', textTransform: 'none', fontWeight: 700 }}
+                        >
+                            Save property
+                        </Button>
                     </form>
-                    <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={() => setOpenSnackbar(false)}>
-  <MuiAlert elevation={6} variant="filled" severity="success" onClose={() => setOpenSnackbar(false)}>
-    Success!
-  </MuiAlert>
-</Snackbar>
+
+                    <Snackbar open={openSnackbar} autoHideDuration={5000} onClose={() => setOpenSnackbar(false)}>
+                        <MuiAlert elevation={6} variant="filled" severity={snackbarSeverity} onClose={() => setOpenSnackbar(false)}>
+                            {snackbarMessage}
+                        </MuiAlert>
+                    </Snackbar>
                 </Paper>
             </Grid>
         </Grid>

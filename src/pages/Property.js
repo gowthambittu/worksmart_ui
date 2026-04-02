@@ -1,577 +1,405 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { Button } from '@material-ui/core';
-import { useNavigate } from 'react-router-dom';
 import Layout from './Layout';
 import { apiFetch } from '../utils/apiClient';
-import { Card, CardContent, Typography } from '@material-ui/core';
-import { CircularProgress } from '@material-ui/core';
-import { Chip } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
-import { Box } from '@material-ui/core';
-import { Grid } from '@material-ui/core';
-import { Table, TableBody, TableCell, TableHead, TableRow, Collapse, IconButton } from '@material-ui/core';
-import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
-import { withStyles } from '@material-ui/core/styles';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
-import { Select, MenuItem, FormControl, InputLabel, TextField } from '@material-ui/core';
+import { Select, MenuItem, FormControl, InputLabel } from '@material-ui/core';
+import { Button } from '@material-ui/core';
 import NewWorkRecord from './NewWorkRecord';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
+const s = {
+  root: { background: '#f5f5f3', minHeight: '100vh', padding: 20 },
+  backRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, cursor: 'pointer', color: '#888780', fontSize: 13 },
+  headerCard: { background: '#fff', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: 12, padding: 20, marginBottom: 16 },
+  headerTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 10 },
+  propTitle: { fontSize: 20, fontWeight: 500, color: '#1a1a1a' },
+  propLocation: { fontSize: 13, color: '#888780', marginTop: 3 },
+  badgeRow: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' },
+  progressLabel: { display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#888780', marginBottom: 6 },
+  progressTrack: { height: 6, background: 'rgba(0,0,0,0.08)', borderRadius: 3, marginBottom: 16 },
+  metricsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 },
+  metric: { background: '#f5f5f3', borderRadius: 8, padding: 12 },
+  metricLabel: { fontSize: 11, color: '#888780', marginBottom: 4 },
+  metricVal: { fontSize: 16, fontWeight: 500, color: '#1a1a1a' },
+  mlRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, paddingTop: 12, borderTop: '0.5px solid rgba(0,0,0,0.08)' },
+  mlField: { fontSize: 12 },
+  mlLabel: { color: '#b4b2a9', marginBottom: 2 },
+  mlVal: { color: '#5F5E5A', fontWeight: 500 },
+  headerActions: { display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' },
+  btn: { padding: '7px 14px', borderRadius: 8, fontSize: 13, border: '0.5px solid rgba(0,0,0,0.15)', background: 'transparent', color: '#1a1a1a', cursor: 'pointer' },
+  btnGreen: { background: '#EAF3DE', color: '#3B6D11', border: '0.5px solid #97C459' },
+  sectionTitle: { fontSize: 12, fontWeight: 500, color: '#888780', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10 },
+  woCard: { background: '#fff', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
+  woHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer' },
+  woMetrics: { display: 'flex', gap: 16, fontSize: 12 },
+  woMetricLabel: { color: '#888780' },
+  woMetricVal: { fontWeight: 500, color: '#1a1a1a' },
+  wrSection: { padding: '0 16px 16px' },
+  wrTableHeader: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 100px', gap: 8, padding: '8px 0', borderBottom: '0.5px solid rgba(0,0,0,0.08)', fontSize: 11, fontWeight: 500, color: '#888780', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  wrRow: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 100px', gap: 8, padding: '10px 0', borderBottom: '0.5px solid rgba(0,0,0,0.06)', fontSize: 13, alignItems: 'center' },
+};
 
+const badge = (text, type) => {
+  const styles = {
+    green: { background: '#EAF3DE', color: '#3B6D11' },
+    amber: { background: '#FAEEDA', color: '#633806' },
+    blue: { background: '#E6F1FB', color: '#0C447C' },
+    gray: { background: '#f5f5f3', color: '#5F5E5A' },
+    red: { background: '#FCEBEB', color: '#791F1F' },
+  };
+  return (
+    <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 20, fontWeight: 500, ...styles[type] }}>
+      {text}
+    </span>
+  );
+};
 
+const getImageSrc = (value) => {
+  if (!value || typeof value !== 'string') return '';
+  const n = value.trim();
+  if (n.startsWith('http://') || n.startsWith('https://') || n.startsWith('data:')) return n;
+  return `data:image/jpeg;base64,${n}`;
+};
 
-const useStyles = makeStyles({
-    chip: {
-        backgroundColor: 'green',
-        color: 'white',
-        fontSize: '120%',
-        padding: '12px 20px',
-    },
-    tableHeader: {
-        fontWeight: 'bold',
-        color: '#3f51b5', // Change this to your preferred color
-        fontSize: '1.2em', // Change this to your preferred font size
-        whiteSpace: 'nowrap', // Prevents the text from wrapping
-    },
-    table: {
-        '& td, & th': {
-            border: '1px dotted #ddd', // Change this to your preferred color and style
-        },
-    },
-    workOrderTable: {
-        '& td, & th': {
-            border: '1px dotted #999', // Change this to your preferred color and style
-        },
-    }
-});
+const fmt = (val, type = 'currency') => {
+  if (val == null) return '—';
+  if (type === 'currency') return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+  if (type === 'date') return new Date(val).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  return val;
+};
 
 const Property = ({ username, authToken }) => {
-    const { propert_id } = useParams();
-    const [property, setProperty] = useState([]);
-    const navigate = useNavigate();
-    const [isLoading, setIsLoading] = useState(true);
-    const [openRow, setOpenRow] = useState(null);
-    const [open, setOpen] = useState(false);
-    const [refreshData, setRefreshData] = useState(false);
-    const [zoomOpen, setZoomOpen] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(null);
-    const [zoomLevel, setZoomLevel] = useState(1);
-    const [openAssignment, setOpenAssignment] = useState(false);
-    const [users, setUsers] = useState([]);
-    const [assignment, setAssignment] = useState({
-        assigned_labour_id: '',
-        assigned_driver_id: '',
-    });
-    const [assignmentError, setAssignmentError] = useState('');
-    const getImageSrc = (value) => {
-        if (!value || typeof value !== 'string') return '';
-        const normalized = value.trim();
-        if (
-            normalized.startsWith('http://') ||
-            normalized.startsWith('https://') ||
-            normalized.startsWith('data:')
-        ) {
-            return normalized;
-        }
-        return `data:image/jpeg;base64,${normalized}`;
-    };
+  const { propert_id } = useParams();
+  const navigate = useNavigate();
+  const [property, setProperty] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [openRow, setOpenRow] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [activeWorkOrderId, setActiveWorkOrderId] = useState(null);
+  const [refreshData, setRefreshData] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [openAssignment, setOpenAssignment] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [assignment, setAssignment] = useState({ assigned_labour_id: '', assigned_driver_id: '' });
+  const [assignmentError, setAssignmentError] = useState('');
 
-    const zoomIn = (event) => {
-        event.stopPropagation(); // Prevent click event from propagating to the dialog
-        setZoomLevel(zoomLevel + 0.1); // Increase zoom level by 0.1
-    };
+  useEffect(() => {
+    apiFetch(`/api/property/${propert_id}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+    }).then(({ data }) => {
+      if (data.status === 'fail') { navigate('/login'); return; }
+      setProperty(data.data);
+      setIsLoading(false);
+    }).catch(() => navigate('/login'));
+  }, [navigate, propert_id, refreshData]);
 
-    const zoomOut = (event) => {
-        event.stopPropagation(); // Prevent click event from propagating to the dialog
-        setZoomLevel(zoomLevel - 0.1); // Decrease zoom level by 0.1
-    };
+  useEffect(() => {
+    apiFetch('/auth/users', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}`, 'Content-Type': 'application/json' }
+    }).then(({ data }) => setUsers(data.data || [])).catch(console.error);
+  }, []);
 
-    const StyledTableCell = withStyles((theme) => ({
-        head: {
-            backgroundColor: theme.palette.common.white,
-            color: 'green',
-            fontSize: 18,
-            fontWeight: 'bold',
-        },
-        body: {
-            fontSize: 14,
-        },
-    }))(TableCell);
+  const handleApprove = async (recordId, work_done) => {
+    try {
+      await apiFetch('/api/work_record', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        body: JSON.stringify({ record_id: recordId, is_verified: '1', work_done })
+      });
+      setRefreshData(r => !r);
+    } catch (error) { console.error(error); }
+  };
 
-    const handleClose = () => {
-        setOpen(false);
-        setRefreshData(!refreshData)
-    };
-
-    const handleImageClickOpen = (image) => {
-        setSelectedImage(image);
-        setZoomOpen(true);
-    };
-
-    const handleImageClose = () => {
-        setZoomOpen(false);
-    };
-
-    const handleApprove = async (recordId, work_done) => {
-        console.log('handleApprove called', work_done);
-        try {
-            const response = await apiFetch('/api/work_record', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                },
-                body: JSON.stringify({
-                    record_id: recordId,
-                    is_verified: "1",
-                    work_done: work_done
-                })
-            });
-            const data = response.data;
-            console.log(data);
-            setRefreshData(!refreshData);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const submitWorkRecord = () => {
-        setOpen(true);
-    };
-
-
-    // const handleReject = async (recordId, work_done) => {
-    //     const response = await fetch(`${API_HOST}/api/work_record`, {
-    //         method: 'PUT',
-    //         headers: {
-    //             'Content-Type': 'application/json',
-    //             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-    //         },
-    //         body: JSON.stringify({
-    //             record_id: recordId,
-    //             is_verified: 0,
-    //             work_done: -work_done
-    //         })
-    //     });
-
-    //     const data = await response.json();
-    //     console.log(data);
-    // };
-
-    const classes = useStyles();
-    const handleBack = () => {
-        console.log('handleBack called');
-        navigate('/properties');
-    };
-    useEffect(() => {
-        apiFetch(`/api/property/${propert_id}`, {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-            }
-        })
-            .then(({ data }) => {
-                if (data.status === 'fail') {
-                    navigate('/login');
-                }
-                setProperty(data.data);
-                console.log('Property data:', data);
-                setIsLoading(false); // Set loading to false after data is fetched
-            })
-            .catch(error => {
-                navigate('/login')
-                console.error('There was an error!', error);
-            });
-    }, [navigate, propert_id, refreshData]);
-
-    useEffect(() => {
-        apiFetch('/auth/users', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                'Content-Type': 'application/json',
-            },
-        })
-            .then(({ data }) => setUsers(data.data || []))
-            .catch((error) => console.error(error));
-    }, []);
-
-    if (isLoading) {
-        return <CircularProgress />;
+  const handleCreateWorkOrderGroup = async () => {
+    if (!assignment.assigned_labour_id && !assignment.assigned_driver_id) {
+      setAssignmentError('Please select at least one group.'); return;
     }
+    setAssignmentError('');
+    const payload = {};
+    if (assignment.assigned_labour_id) payload.assigned_labour_id = Number(assignment.assigned_labour_id);
+    if (assignment.assigned_driver_id) payload.assigned_driver_id = Number(assignment.assigned_driver_id);
+    try {
+      const res = await apiFetch(`/api/property/${propert_id}/work_order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        body: JSON.stringify(payload)
+      });
+      if (res.data.status === 'fail') { setAssignmentError(res.data.message); return; }
+      setOpenAssignment(false);
+      setAssignment({ assigned_labour_id: '', assigned_driver_id: '' });
+      setRefreshData(r => !r);
+    } catch (error) { setAssignmentError(error?.data?.message || 'Failed.'); }
+  };
 
-    // Check if property data is available
-    if (!property || !property[0] || !property[0].property) {
-        return <div>No property data available</div>;
-    }
+  const exportWorkOrdersToPDF = (workOrder, propertyDetails) => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text(`Work Order — ${propertyDetails.property_name}`, 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Order ID: ${workOrder.work_order_id}`, 14, 32);
+    doc.text(`Assigned: ${fmt(workOrder.assigned_date, 'date')}`, 14, 40);
+    doc.text(`Worker: ${workOrder.user_full_name} (${workOrder.user_role})`, 14, 48);
+    doc.text(`Total Earnings: ₹${workOrder.total_earnings}`, 120, 32);
+    doc.text(`Work Done: ${workOrder.total_work_done} tons`, 120, 40);
+    doc.text(`Paid Out: ${workOrder.paid_out || '—'} tons`, 120, 48);
+    const rows = (workOrder.work_records || [])
+      .filter(r => r.is_verified && r.work_done_tons >= 0)
+      .map(r => [r.record_id, r.work_done_tons, fmt(r.created_at, 'date')]);
+    doc.autoTable(['Record ID', 'Work Done (tons)', 'Date'], rows, { startY: 56 });
+    doc.save(`work_order_${workOrder.work_order_id}.pdf`);
+  };
 
-    // Get the first property's details
-    const propertyDetails = property[0].property;
-    const workOrders = property[0].work_orders;
+  if (isLoading) return (
+    <Layout username={username}>
+      <div style={{ padding: 40, color: '#888780', fontSize: 14 }}>Loading property...</div>
+    </Layout>
+  );
 
-    const exportWorkOrdersToPDF = (workOrder) => {
-        console.log("Exporting work orders:", workOrder); // Debugging log to inspect workOrders
+  if (!property || !property[0] || !property[0].property) return (
+    <Layout username={username}>
+      <div style={{ padding: 40, color: '#888780', fontSize: 14 }}>No property data found.</div>
+    </Layout>
+  );
 
-        const doc = new jsPDF();
+  const pd = property[0].property;
+  const workOrders = property[0].work_orders.flat();
+  const progressPct = pd.estimated_work > 0 ? Math.min(100, Math.round((pd.completed_work / pd.estimated_work) * 100)) : 0;
+  const labourUsers = users.filter(u => u.role === 'labour');
+  const driverUsers = users.filter(u => u.role === 'driver');
 
-        doc.setFontSize(18);
-        doc.text(`Work Order for ${propertyDetails.property_name}`, 70, 22);
-        doc.setFontSize(11);
-        doc.text(`Order ID: ${workOrder.work_order_id}`, 14, 30);
-        doc.text(`Assigned Date: ${new Date(workOrder.assigned_date).toLocaleDateString()}`, 14, 38);
-        doc.text(`Assigned To: ${workOrder.user_full_name} (${workOrder.user_role})`, 14, 46);
-        doc.text(`Paid Out Tons: ${workOrder.paid_out}`, 144, 30);
-        doc.text(`Total Earnings: ${workOrder.total_earnings}`, 144, 38);
-        doc.text(`Total Work Done in Tons: ${workOrder.total_work_done}`, 144, 46);
-        const tableColumn = ["Record ID", "Work Done (tons)", "Created At"];
-        const tableRows = [];
+  return (
+    <Layout username={username}>
+      <div style={s.root}>
 
-        workOrder.work_records.forEach(record => {
-            if (record.is_verified && record.work_done_tons >= 0) {
-                const recordData = [
-                    record.record_id,
-                    record.work_done_tons,
-                    new Date(record.created_at).toLocaleDateString(),
-                ];
-                tableRows.push(recordData);
-            }
+        {/* Back */}
+        <div style={s.backRow} onClick={() => navigate('/properties')}>
+          ← Back to properties
+        </div>
 
-        });
+        {/* Header card */}
+        <div style={s.headerCard}>
+          <div style={s.headerTop}>
+            <div>
+              <div style={s.propTitle}>{pd.property_name}</div>
+              <div style={s.propLocation}>{pd.location} · Created {fmt(pd.created_at, 'date')}</div>
+            </div>
+            <div style={s.badgeRow}>
+              {badge(progressPct >= 100 ? 'Completed' : 'Active', progressPct >= 100 ? 'gray' : 'green')}
+              {pd.crop_type && badge(pd.crop_type.replace(/_/g, ' '), 'blue')}
+              {pd.season && badge(pd.season.charAt(0).toUpperCase() + pd.season.slice(1), 'gray')}
+            </div>
+          </div>
 
-        doc.autoTable(tableColumn, tableRows, { startY: 54 });
+          {/* Progress */}
+          <div>
+            <div style={s.progressLabel}>
+              <span>Harvest progress</span>
+              <span style={{ fontWeight: 500 }}>{pd.completed_work} / {pd.estimated_work} tons ({progressPct}%)</span>
+            </div>
+            <div style={s.progressTrack}>
+              <div style={{ height: 6, borderRadius: 3, background: progressPct >= 100 ? '#4ade80' : progressPct >= 50 ? '#4ade80' : '#FAC775', width: `${progressPct}%` }} />
+            </div>
+          </div>
 
-        doc.save(`work_order_${workOrder.work_order_id}.pdf`);
+          {/* Metrics */}
+          <div style={s.metricsGrid}>
+            {[
+              { label: 'Land area', val: `${pd.land_area_acres} ac` },
+              { label: 'Purchase cost', val: fmt(pd.purchase_cost) },
+              { label: 'Purchase date', val: fmt(pd.purchase_date, 'date') },
+              { label: 'Cost / labour ton', val: fmt(pd.cost_to_labour) },
+              { label: 'Cost / driver ton', val: fmt(pd.cost_to_driver) },
+              { label: 'Completed work', val: `${pd.completed_work} t`, warn: true },
+            ].map((m, i) => (
+              <div key={i} style={{ ...s.metric, ...(m.warn ? { background: '#FAEEDA' } : {}) }}>
+                <div style={{ ...s.metricLabel, ...(m.warn ? { color: '#633806' } : {}) }}>{m.label}</div>
+                <div style={{ ...s.metricVal, ...(m.warn ? { color: '#412402' } : {}) }}>{m.val}</div>
+              </div>
+            ))}
+          </div>
 
-    };
+          {/* ML attributes */}
+          {(pd.soil_type || pd.irrigation_type || pd.plant_spacing_ft || pd.harvest_count || pd.fertilizer_type || pd.avg_yield_per_acre) && (
+            <div style={s.mlRow}>
+              {pd.soil_type && <div style={s.mlField}><div style={s.mlLabel}>Soil type <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 20, background: '#EAF3DE', color: '#3B6D11', border: '1px dashed #97C459' }}>ML</span></div><div style={s.mlVal}>{pd.soil_type.replace(/_/g, ' ')}</div></div>}
+              {pd.irrigation_type && <div style={s.mlField}><div style={s.mlLabel}>Irrigation</div><div style={s.mlVal}>{pd.irrigation_type.replace(/_/g, ' ')} · {pd.is_irrigated ? 'Irrigated' : 'Not irrigated'}</div></div>}
+              {pd.plant_spacing_ft && <div style={s.mlField}><div style={s.mlLabel}>Plant spacing</div><div style={s.mlVal}>{pd.plant_spacing_ft} ft</div></div>}
+              {pd.harvest_count != null && <div style={s.mlField}><div style={s.mlLabel}>Harvest count</div><div style={s.mlVal}>{pd.harvest_count} seasons</div></div>}
+              {pd.fertilizer_type && <div style={s.mlField}><div style={s.mlLabel}>Fertilizer</div><div style={s.mlVal}>{pd.fertilizer_type.charAt(0).toUpperCase() + pd.fertilizer_type.slice(1)}</div></div>}
+              {pd.avg_yield_per_acre && <div style={s.mlField}><div style={s.mlLabel}>Avg yield / acre</div><div style={s.mlVal}>{pd.avg_yield_per_acre} tons</div></div>}
+            </div>
+          )}
 
-    const labourUsers = users.filter((user) => user.role === 'labour');
-    const driverUsers = users.filter((user) => user.role === 'driver');
+          {/* Actions */}
+          <div style={s.headerActions}>
+            <button style={{ ...s.btn, ...s.btnGreen }} onClick={() => setOpenAssignment(true)}>+ Assign new group</button>
+            <button style={s.btn} onClick={() => navigate('/properties')}>Edit property</button>
+          </div>
+        </div>
 
-    const handleAssignmentChange = (event) => {
-        setAssignment({
-            ...assignment,
-            [event.target.name]: event.target.value,
-        });
-    };
+        {/* Work orders */}
+        <div style={s.sectionTitle}>Work orders ({workOrders.length})</div>
 
-    const handleCreateWorkOrderGroup = async () => {
-        if (!assignment.assigned_labour_id && !assignment.assigned_driver_id) {
-            setAssignmentError('Please select at least one group (labour or driver).');
-            return;
-        }
-        setAssignmentError('');
-        const payload = {};
-        if (assignment.assigned_labour_id) {
-            payload.assigned_labour_id = Number(assignment.assigned_labour_id);
-        }
-        if (assignment.assigned_driver_id) {
-            payload.assigned_driver_id = Number(assignment.assigned_driver_id);
-        }
-        try {
-            const response = await apiFetch(`/api/property/${propert_id}/work_order`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                },
-                body: JSON.stringify(payload),
-            });
+        {workOrders.map((wo, index) => (
+          <div key={wo.work_order_id} style={s.woCard}>
 
-            const data = response.data;
-            if (data.status === 'fail') {
-                setAssignmentError(data.message || 'Failed to create work order group.');
-                return;
-            }
+            {/* Work order header */}
+            <div style={s.woHeader} onClick={() => setOpenRow(openRow === index ? null : index)}>
+              <span style={{ fontSize: 12, color: '#888780', transition: 'transform 0.2s', transform: openRow === index ? 'rotate(180deg)' : 'none' }}>▼</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: '#888780' }}>#{wo.work_order_id}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>{wo.user_full_name}</span>
+                  {badge(wo.user_role, wo.user_role === 'labour' ? 'blue' : 'amber')}
+                  {badge(wo.is_completed ? 'Completed' : 'In progress', wo.is_completed ? 'gray' : 'green')}
+                </div>
+                <div style={{ fontSize: 11, color: '#b4b2a9', marginTop: 2 }}>Assigned {fmt(wo.assigned_date, 'date')}</div>
+              </div>
+              <div style={s.woMetrics}>
+                <div><div style={s.woMetricLabel}>Work done</div><div style={s.woMetricVal}>{wo.total_work_done} t</div></div>
+                <div><div style={s.woMetricLabel}>Earnings</div><div style={s.woMetricVal}>₹{wo.total_earnings}</div></div>
+                <div><div style={s.woMetricLabel}>Paid out</div><div style={s.woMetricVal}>{wo.paid_out || '—'}</div></div>
+              </div>
+              <button
+                style={{ ...s.btn, fontSize: 11, marginLeft: 8 }}
+                onClick={e => { e.stopPropagation(); exportWorkOrdersToPDF(wo, pd); }}
+              >
+                Export PDF
+              </button>
+            </div>
 
-            setOpenAssignment(false);
-            setAssignment({ assigned_labour_id: '', assigned_driver_id: '' });
-            setRefreshData(!refreshData);
-        } catch (error) {
-            setAssignmentError(error?.data?.message || 'Failed to create work order group.');
-        }
-    };
+            {/* Work records — expanded */}
+            {openRow === index && (
+              <div style={s.wrSection}>
+                <div style={{ height: '0.5px', background: 'rgba(0,0,0,0.08)', marginBottom: 14 }} />
+                <div style={{ fontSize: 12, fontWeight: 500, color: '#5F5E5A', marginBottom: 10 }}>Work records</div>
 
+                <div style={s.wrTableHeader}>
+                  <div>ID</div><div>Tons</div><div>Verified</div><div>Date</div><div>Proof</div><div>Updated</div><div>Action</div>
+                </div>
 
-    return (
-        <Layout username={username}>
-            <Card>
-                {/* Top section for property overview */}
-                <CardContent>
-                    <Box display="flex" justifyContent="center">
-                        <Chip
-                            label={propertyDetails.property_name}
-                            className={classes.chip}
-                            sx={{ fontSize: '150%', transform: 'scale(1.3)' }} // Increase the font size by 50%
+                {(wo.work_records || []).map(record => (
+                  <div key={record.record_id} style={s.wrRow}>
+                    <div style={{ color: '#888780' }}>#{record.record_id}</div>
+                    <div style={{ fontWeight: 500 }}>{record.work_done_tons}</div>
+                    <div>{badge(record.is_verified ? 'Yes' : 'No', record.is_verified ? 'green' : 'amber')}</div>
+                    <div style={{ color: '#888780' }}>{fmt(record.created_at, 'date')}</div>
+                    <div>
+                      {record.proof_of_work_file_path ? (
+                        <img
+                          src={getImageSrc(record.proof_of_work_file_path)}
+                          alt="Proof"
+                          style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', border: '0.5px solid rgba(0,0,0,0.1)', cursor: 'pointer' }}
+                          onClick={() => { setSelectedImage(getImageSrc(record.proof_of_work_file_path)); setZoomOpen(true); }}
                         />
-                    </Box>
-                    <Box height={20} />
-                    <Grid container spacing={2}>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Acerage: {propertyDetails.land_area_acres}
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Estimated Tonnage: {propertyDetails.estimated_work} tons
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Created At: {new Date(propertyDetails.created_at).toLocaleDateString()}
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Purchase Date: {new Date(propertyDetails.purchase_date).toLocaleDateString()}
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Completed Work: {propertyDetails.completed_work} tons
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Purchase Cost: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(propertyDetails.purchase_cost)}
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Cost to Driver: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(propertyDetails.cost_to_driver)}
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={3}>
-                            <Typography color="textSecondary">
-                                Cost to Labour: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(propertyDetails.cost_to_labour)}
-                            </Typography>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => setOpenAssignment(true)}
-                            >
-                                Assign New Group
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </CardContent>
+                      ) : <span style={{ fontSize: 12, color: '#b4b2a9' }}>None</span>}
+                    </div>
+                    <div style={{ color: '#888780' }}>{fmt(record.update_date, 'date')}</div>
+                    <div>
+                      <button
+                        disabled={record.is_verified}
+                        onClick={() => handleApprove(record.record_id, record.work_done_tons)}
+                        style={{
+                          padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: record.is_verified ? 'default' : 'pointer',
+                          border: '0.5px solid', ...(record.is_verified
+                            ? { background: '#f5f5f3', color: '#888780', borderColor: 'rgba(0,0,0,0.1)' }
+                            : { background: '#EAF3DE', color: '#3B6D11', borderColor: '#97C459' })
+                        }}
+                      >
+                        {record.is_verified ? 'Approved' : 'Approve'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
 
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    style={{ ...s.btn, ...s.btnGreen, fontSize: 12 }}
+                    onClick={() => { setActiveWorkOrderId(wo.work_order_id); setOpen(true); }}
+                  >
+                    + Add work record
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
 
-                <CardContent>
-                    <Table className={classes.workOrderTable}>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell />
-                                <StyledTableCell>Work Order ID</StyledTableCell>
-                                <StyledTableCell>Status</StyledTableCell>
-                                <StyledTableCell>Assigned Date</StyledTableCell>
-                                <StyledTableCell>Total Earnings</StyledTableCell>
-                                <StyledTableCell>PAID OUT(tons)</StyledTableCell>
-                                <StyledTableCell>Total Work Done</StyledTableCell>
-                                <StyledTableCell>Update Date</StyledTableCell>
-                                <StyledTableCell>Group Name</StyledTableCell>
-                                <StyledTableCell>Group Type</StyledTableCell>
-                                <StyledTableCell>Action</StyledTableCell>
+        {/* Image zoom dialog */}
+        <Dialog open={zoomOpen} onClose={() => setZoomOpen(false)} maxWidth="lg" fullWidth>
+          <DialogContent style={{ background: '#000', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <img
+                src={selectedImage}
+                alt="Proof of work"
+                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'center', maxWidth: '90vw', maxHeight: '80vh' }}
+              />
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <button style={s.btn} onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))}>Zoom out</button>
+            <button style={s.btn} onClick={() => setZoomLevel(z => z + 0.1)}>Zoom in</button>
+            <button style={s.btn} onClick={() => setZoomOpen(false)}>Close</button>
+          </DialogActions>
+        </Dialog>
 
+        {/* Add work record dialog */}
+        <Dialog maxWidth="sm" open={open} onClose={() => { setOpen(false); setRefreshData(r => !r); }}>
+          <DialogTitle>New work record</DialogTitle>
+          <DialogContent>
+            <NewWorkRecord token={authToken} workorderId={activeWorkOrderId} />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => { setOpen(false); setRefreshData(r => !r); }} color="primary">Cancel</Button>
+          </DialogActions>
+        </Dialog>
 
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {workOrders.flat().map((workOrder, index) => (
-                                <>
-                                    <TableRow key={workOrder.work_order_id}>
-                                        <TableCell>
-                                            <IconButton size="small" onClick={() => setOpenRow(openRow === index ? null : index)}>
-                                                {openRow === index ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                                            </IconButton>
-                                        </TableCell>
-                                        <TableCell component="th" scope="row">
-                                            {workOrder.work_order_id}
-                                        </TableCell>
+        {/* Assign new group dialog */}
+        <Dialog maxWidth="sm" open={openAssignment} onClose={() => setOpenAssignment(false)}>
+          <DialogTitle>Assign new work order group</DialogTitle>
+          <DialogContent>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Assign Labour (Optional)</InputLabel>
+              <Select name="assigned_labour_id" value={assignment.assigned_labour_id}
+                onChange={e => setAssignment(a => ({ ...a, assigned_labour_id: e.target.value }))}>
+                {labourUsers.map(u => (
+                  <MenuItem key={u.user_id} value={u.user_id.toString()}>
+                    {u.full_name} — {u.has_work ? 'Has work' : 'Available'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Assign Driver (Optional)</InputLabel>
+              <Select name="assigned_driver_id" value={assignment.assigned_driver_id}
+                onChange={e => setAssignment(a => ({ ...a, assigned_driver_id: e.target.value }))}>
+                {driverUsers.map(u => (
+                  <MenuItem key={u.user_id} value={u.user_id.toString()}>
+                    {u.full_name} — {u.has_work ? 'Has work' : 'Available'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {assignmentError && (
+              <div style={{ fontSize: 13, color: '#A32D2D', marginTop: 8 }}>{assignmentError}</div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenAssignment(false)}>Cancel</Button>
+            <Button onClick={handleCreateWorkOrderGroup} variant="contained" color="primary">Create group</Button>
+          </DialogActions>
+        </Dialog>
 
-                                        <TableCell >{workOrder.is_completed ? "Completed" : "In Progress"}</TableCell>
-                                        <TableCell >{new Date(workOrder.assigned_date).toLocaleDateString()}</TableCell>
-                                        <TableCell >{workOrder.total_earnings}</TableCell>
-                                        <TableCell >{workOrder.paid_out}</TableCell>
-                                        <TableCell >{workOrder.total_work_done}</TableCell>
-                                        <TableCell >{new Date(workOrder.update_date).toLocaleDateString()}</TableCell>
-                                        <TableCell >{workOrder.user_full_name}</TableCell>
-                                        <TableCell >{workOrder.user_role}</TableCell>
-                                        <TableCell ><button onClick={() => exportWorkOrdersToPDF(workOrder,propertyDetails)}>Export to PDF</button></TableCell>
-
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                                            <Collapse in={openRow === index} timeout="auto" unmountOnExit>
-                                                <Box margin={1}>
-                                                    <Typography variant="h6" gutterBottom component="div">
-                                                        Work Records
-                                                    </Typography>
-                                                    <Table size="small" aria-label="work records">
-                                                        <TableHead>
-                                                            <TableRow>
-                                                                <TableCell className={classes.tableHeader}>Record ID</TableCell>
-                                                                <TableCell className={classes.tableHeader}>Work Done (tons)</TableCell>
-                                                                <TableCell className={classes.tableHeader}>Verified</TableCell>
-                                                                <TableCell className={classes.tableHeader}>Created At</TableCell>
-                                                                <TableCell className={classes.tableHeader}>Proof of Work</TableCell>
-                                                                <TableCell className={classes.tableHeader}>Update Date</TableCell>
-                                                                <TableCell className={classes.tableHeader}>Action</TableCell>
-                                                            </TableRow>
-                                                        </TableHead>
-                                                        <TableBody>
-                                                            {workOrder.work_records.map((record) => (
-                                                                <TableRow key={record.record_id}>
-                                                                    <TableCell>{record.record_id}</TableCell>
-                                                                    <TableCell>{record.work_done_tons}</TableCell>
-                                                                    <TableCell>{record.is_verified ? "Yes" : "No"}</TableCell>
-                                                                    <TableCell>{new Date(record.created_at).toLocaleDateString()}</TableCell>
-                                                                    <TableCell>
-                                                                        <img
-                                                                            src={getImageSrc(record.proof_of_work_file_path)}
-                                                                            alt="Proof of Work"
-                                                                            style={{ width: '100px', height: '100px' }}
-                                                                            onClick={() => handleImageClickOpen(getImageSrc(record.proof_of_work_file_path))}
-                                                                        />
-                                                                    </TableCell>
-
-                                                                    <Dialog open={zoomOpen} onClose={handleImageClose} maxWidth="lg" fullWidth>
-                                            <DialogContent style={{ overflowY: 'auto', overflowX: 'auto', backgroundColor: 'black' }}> {/* Allow scrolling if necessary */}
-                                                <div style={{ display: 'flex', justifyContent: 'center', overflow: 'hidden' }}> {/* Center the image without forcing overflow */}
-                                                    <img src={selectedImage} alt="Zoomed Proof of Work" style={{
-                                                        transform: `scale(${zoomLevel})`,
-                                                        transformOrigin: 'center',
-                                                        maxWidth: '90vw', // Use viewport width to limit image width
-                                                        maxHeight: '90vh', // Use viewport height to limit image height
-                                                    }} />
-                                                </div>
-                                            </DialogContent>
-                                            <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                                                <button onClick={(event) => zoomIn(event)}>Zoom In</button>
-                                                <button onClick={(event) => zoomOut(event)}>Zoom Out</button>
-                                            </div>
-                                        </Dialog>
-
-
-                                                                    <TableCell>{new Date(record.update_date).toLocaleDateString()}</TableCell>
-                                                                    <TableCell>
-                                                                        <Box display="flex" justifyContent="space-between">
-                                                                            <Button
-                                                                                variant="contained"
-                                                                                color="primary"
-                                                                                style={{ marginRight: '10px' }}
-                                                                                onClick={() => handleApprove(record.record_id, record.work_done_tons)}
-                                                                                disabled={record.is_verified}
-                                                                            >
-                                                                                Approve
-                                                                            </Button>
-
-                                                                        </Box>
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                    <Button variant="outlined" color="primary" onClick={submitWorkRecord}>
-                                                        Add Work Record
-                                                    </Button>
-                                                    <Dialog maxWidth="sm" open={open} onClose={handleClose} aria-labelledby="form-dialog-title">
-                                                        <DialogTitle id="form-dialog-title">New Work Record</DialogTitle>
-                                                        <DialogContent>
-                                                            <NewWorkRecord token={authToken} workorderId={workOrder.work_order_id} />
-                                                        </DialogContent>
-                                                        <DialogActions>
-                                                            <Button onClick={handleClose} color="primary">
-                                                                Cancel
-                                                            </Button>
-                                                        </DialogActions>
-                                                    </Dialog>
-                                                </Box>
-                                            </Collapse>
-                                        </TableCell>
-                                    </TableRow>
-                                </>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-
-                {/* Bottom section for work orders */}
-                <CardContent>
-                    {/* Render your work orders here */}
-                </CardContent>
-            </Card>
-
-            <Dialog
-                maxWidth="sm"
-                open={openAssignment}
-                onClose={() => setOpenAssignment(false)}
-                aria-labelledby="assign-work-order-group-title"
-            >
-                <DialogTitle id="assign-work-order-group-title">Assign New Work Order Group</DialogTitle>
-                <DialogContent>
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="property-assigned-labour-label">Assign Labour (Optional)</InputLabel>
-                        <Select
-                            labelId="property-assigned-labour-label"
-                            fullWidth
-                            name="assigned_labour_id"
-                            onChange={handleAssignmentChange}
-                            value={assignment.assigned_labour_id}
-                        >
-                            {labourUsers.map((user) => (
-                                <MenuItem key={user.user_id} value={user.user_id.toString()}>
-                                    {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel id="property-assigned-driver-label">Assign Driver (Optional)</InputLabel>
-                        <Select
-                            labelId="property-assigned-driver-label"
-                            fullWidth
-                            name="assigned_driver_id"
-                            onChange={handleAssignmentChange}
-                            value={assignment.assigned_driver_id}
-                        >
-                            {driverUsers.map((user) => (
-                                <MenuItem key={user.user_id} value={user.user_id.toString()}>
-                                    {user.full_name} - {user.has_work ? 'Has Work' : 'No Work'}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    {assignmentError && (
-                        <TextField
-                            fullWidth
-                            margin="normal"
-                            value={assignmentError}
-                            InputProps={{ readOnly: true }}
-                            error
-                        />
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenAssignment(false)} color="primary">
-                        Cancel
-                    </Button>
-                    <Button onClick={handleCreateWorkOrderGroup} color="primary" variant="contained">
-                        Create Group
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Button onClick={handleBack}>Back</Button>
-        </Layout>
-    );
+      </div>
+    </Layout>
+  );
 };
 
 export default Property;
