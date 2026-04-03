@@ -182,7 +182,16 @@ const NewPropertyForm = ({ token, onSuccess }) => {
                         <Grid container spacing={2}>
                             <Grid item xs={12} md={6}><TextField fullWidth name="property_name" label="Property name" onChange={handleChange} /></Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="location" label="Location / village" onChange={handleChange} /></Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="land_area_acres" label="Land area (acres)" type="number" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    name="land_area_acres"
+                                    label="Land area (acres)"
+                                    type="number"
+                                    onChange={handleChange}
+                                    inputProps={{ step: '0.01' }}
+                                />
+                            </Grid>
                             <Grid item xs={12} md={6}>
                                 <TextField fullWidth name="purchase_date" label="Purchase date" type="date" InputLabelProps={{ shrink: true }} onChange={handleChange} />
                             </Grid>
