@@ -35,11 +35,13 @@ const s = {
   btnGreen: { background: '#EAF3DE', color: '#3B6D11', border: '0.5px solid #97C459' },
   sectionTitle: { fontSize: 12, fontWeight: 500, color: '#888780', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 10 },
   woCard: { background: '#fff', border: '0.5px solid rgba(0,0,0,0.1)', borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
-  woHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer' },
-  woMetrics: { display: 'flex', gap: 16, fontSize: 12 },
+  woHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer', flexWrap: 'wrap' },
+  woMetrics: { display: 'flex', gap: 16, fontSize: 12, flexWrap: 'wrap' },
   woMetricLabel: { color: '#888780' },
   woMetricVal: { fontWeight: 500, color: '#1a1a1a' },
   wrSection: { padding: '0 16px 16px' },
+  wrScrollWrap: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
+  wrTable: { minWidth: 580 },
   wrTableHeader: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 100px', gap: 8, padding: '8px 0', borderBottom: '0.5px solid rgba(0,0,0,0.08)', fontSize: 11, fontWeight: 500, color: '#888780', textTransform: 'uppercase', letterSpacing: '0.04em' },
   wrRow: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 100px', gap: 8, padding: '10px 0', borderBottom: '0.5px solid rgba(0,0,0,0.06)', fontSize: 13, alignItems: 'center' },
 };
@@ -268,7 +270,7 @@ const Property = ({ username, authToken }) => {
                 <div><div style={s.woMetricLabel}>Paid out</div><div style={s.woMetricVal}>{wo.paid_out || '—'}</div></div>
               </div>
               <button
-                style={{ ...s.btn, fontSize: 11, marginLeft: 8 }}
+                style={{ ...s.btn, fontSize: 11, marginLeft: 'auto' }}
                 onClick={e => { e.stopPropagation(); exportWorkOrdersToPDF(wo, pd); }}
               >
                 Export PDF
@@ -281,43 +283,47 @@ const Property = ({ username, authToken }) => {
                 <div style={{ height: '0.5px', background: 'rgba(0,0,0,0.08)', marginBottom: 14 }} />
                 <div style={{ fontSize: 12, fontWeight: 500, color: '#5F5E5A', marginBottom: 10 }}>Work records</div>
 
-                <div style={s.wrTableHeader}>
-                  <div>ID</div><div>Tons</div><div>Verified</div><div>Date</div><div>Proof</div><div>Updated</div><div>Action</div>
-                </div>
+                <div style={s.wrScrollWrap}>
+                  <div style={s.wrTable}>
+                    <div style={s.wrTableHeader}>
+                      <div>ID</div><div>Tons</div><div>Verified</div><div>Date</div><div>Proof</div><div>Updated</div><div>Action</div>
+                    </div>
 
-                {(wo.work_records || []).map(record => (
-                  <div key={record.record_id} style={s.wrRow}>
-                    <div style={{ color: '#888780' }}>#{record.record_id}</div>
-                    <div style={{ fontWeight: 500 }}>{record.work_done_tons}</div>
-                    <div>{badge(record.is_verified ? 'Yes' : 'No', record.is_verified ? 'green' : 'amber')}</div>
-                    <div style={{ color: '#888780' }}>{fmt(record.created_at, 'date')}</div>
-                    <div>
-                      {record.proof_of_work_file_path ? (
-                        <img
-                          src={getImageSrc(record.proof_of_work_file_path)}
-                          alt="Proof"
-                          style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', border: '0.5px solid rgba(0,0,0,0.1)', cursor: 'pointer' }}
-                          onClick={() => { setSelectedImage(getImageSrc(record.proof_of_work_file_path)); setZoomOpen(true); }}
-                        />
-                      ) : <span style={{ fontSize: 12, color: '#b4b2a9' }}>None</span>}
-                    </div>
-                    <div style={{ color: '#888780' }}>{fmt(record.update_date, 'date')}</div>
-                    <div>
-                      <button
-                        disabled={record.is_verified}
-                        onClick={() => handleApprove(record.record_id, record.work_done_tons)}
-                        style={{
-                          padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: record.is_verified ? 'default' : 'pointer',
-                          border: '0.5px solid', ...(record.is_verified
-                            ? { background: '#f5f5f3', color: '#888780', borderColor: 'rgba(0,0,0,0.1)' }
-                            : { background: '#EAF3DE', color: '#3B6D11', borderColor: '#97C459' })
-                        }}
-                      >
-                        {record.is_verified ? 'Approved' : 'Approve'}
-                      </button>
-                    </div>
+                    {(wo.work_records || []).map(record => (
+                      <div key={record.record_id} style={s.wrRow}>
+                        <div style={{ color: '#888780' }}>#{record.record_id}</div>
+                        <div style={{ fontWeight: 500 }}>{record.work_done_tons}</div>
+                        <div>{badge(record.is_verified ? 'Yes' : 'No', record.is_verified ? 'green' : 'amber')}</div>
+                        <div style={{ color: '#888780' }}>{fmt(record.created_at, 'date')}</div>
+                        <div>
+                          {record.proof_of_work_file_path ? (
+                            <img
+                              src={getImageSrc(record.proof_of_work_file_path)}
+                              alt="Proof"
+                              style={{ width: 48, height: 48, borderRadius: 6, objectFit: 'cover', border: '0.5px solid rgba(0,0,0,0.1)', cursor: 'pointer' }}
+                              onClick={() => { setSelectedImage(getImageSrc(record.proof_of_work_file_path)); setZoomOpen(true); }}
+                            />
+                          ) : <span style={{ fontSize: 12, color: '#b4b2a9' }}>None</span>}
+                        </div>
+                        <div style={{ color: '#888780' }}>{fmt(record.update_date, 'date')}</div>
+                        <div>
+                          <button
+                            disabled={record.is_verified}
+                            onClick={() => handleApprove(record.record_id, record.work_done_tons)}
+                            style={{
+                              padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: record.is_verified ? 'default' : 'pointer',
+                              border: '0.5px solid', ...(record.is_verified
+                                ? { background: '#f5f5f3', color: '#888780', borderColor: 'rgba(0,0,0,0.1)' }
+                                : { background: '#EAF3DE', color: '#3B6D11', borderColor: '#97C459' })
+                            }}
+                          >
+                            {record.is_verified ? 'Approved' : 'Approve'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button
