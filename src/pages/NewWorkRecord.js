@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, TextField, Box } from '@material-ui/core';
 // import { makeStyles } from '@material-ui/core/styles';
 import { format } from 'date-fns';
@@ -21,11 +21,12 @@ import { apiFetch } from '../utils/apiClient';
 //     },
 // }));
 
-function NewWorkRecord({token, workorderId}) {
+function NewWorkRecord({token, workorderId, reopenReason = '', onSuccess}) {
     // const classes = useStyles();
     const [workDone, setWorkDone] = useState('');
     const [proofOfWork, setProofOfWork] = useState(null);
     const [workDate, setWorkDate] = useState('');
+    const [reason, setReason] = useState(reopenReason || '');
     // const [isSuccess, setIsSuccess] = useState(false);
     const [openSnackbar, setOpenSnackbar] = useState(false);
 
@@ -36,16 +37,25 @@ function NewWorkRecord({token, workorderId}) {
         setOpenSnackbar(false);
     };
 
+    useEffect(() => {
+        setReason(reopenReason || '');
+    }, [reopenReason]);
+
 
     const handleSubmit = (event) => {
         event.preventDefault();
     
         const formData = new FormData();
-        formData.append('proof_of_work', proofOfWork);
+        if (proofOfWork) {
+            formData.append('proof_of_work', proofOfWork);
+        }
         formData.append('work_order_id', workorderId);
         formData.append('work_date', format(new Date(workDate), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\''));
         formData.append('work_done_tons', workDone);
         formData.append('is_verified', false);
+        if (reason && reason.trim()) {
+            formData.append('reason', reason.trim());
+        }
     
         apiFetch('/api/work_record', {
             method: 'POST',
@@ -61,6 +71,8 @@ function NewWorkRecord({token, workorderId}) {
             setWorkDone('');
             setProofOfWork(null);
             setWorkDate('');
+            setReason('');
+            if (onSuccess) onSuccess();
         })
         .catch((error) => {
             console.error('Error:', error);
@@ -88,7 +100,6 @@ function NewWorkRecord({token, workorderId}) {
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
-                    required
                 />
             </Box>
             <Box mb={5}>
@@ -101,6 +112,16 @@ function NewWorkRecord({token, workorderId}) {
                         shrink: true,
                     }}
                     required
+                />
+            </Box>
+            <Box mb={5}>
+                <TextField
+                    label="Reason (required if adding to completed order)"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    fullWidth
+                    multiline
+                    minRows={2}
                 />
             </Box>
             <Button type="submit" variant="contained" color="primary">

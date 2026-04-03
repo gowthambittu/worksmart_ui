@@ -7,6 +7,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import { Select, MenuItem, FormControl, InputLabel } from '@material-ui/core';
+import TextField from '@material-ui/core/TextField';
 import { Button } from '@material-ui/core';
 import NewWorkRecord from './NewWorkRecord';
 import jsPDF from 'jspdf';
@@ -41,9 +42,11 @@ const s = {
   woMetricVal: { fontWeight: 500, color: '#1a1a1a' },
   wrSection: { padding: '0 16px 16px' },
   wrScrollWrap: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
-  wrTable: { minWidth: 580 },
-  wrTableHeader: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 100px', gap: 8, padding: '8px 0', borderBottom: '0.5px solid rgba(0,0,0,0.08)', fontSize: 11, fontWeight: 500, color: '#888780', textTransform: 'uppercase', letterSpacing: '0.04em' },
-  wrRow: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 100px', gap: 8, padding: '10px 0', borderBottom: '0.5px solid rgba(0,0,0,0.06)', fontSize: 13, alignItems: 'center' },
+  wrTable: { minWidth: 700 },
+  wrTableHeader: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 220px', gap: 8, padding: '8px 0', borderBottom: '0.5px solid rgba(0,0,0,0.08)', fontSize: 11, fontWeight: 500, color: '#888780', textTransform: 'uppercase', letterSpacing: '0.04em' },
+  wrRow: { display: 'grid', gridTemplateColumns: '50px 80px 70px 80px 70px 80px 220px', gap: 8, padding: '10px 0', borderBottom: '0.5px solid rgba(0,0,0,0.06)', fontSize: 13, alignItems: 'center' },
+  wrActions: { display: 'flex', gap: 6, flexWrap: 'wrap' },
+  btnWarn: { background: '#FCEBEB', color: '#791F1F', border: '0.5px solid #E2A7A7' },
 };
 
 const badge = (text, type) => {
@@ -91,6 +94,17 @@ const Property = ({ username, authToken }) => {
   const [users, setUsers] = useState([]);
   const [assignment, setAssignment] = useState({ assigned_labour_id: '', assigned_driver_id: '' });
   const [assignmentError, setAssignmentError] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [addMissedDialogOpen, setAddMissedDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [editPayload, setEditPayload] = useState({ work_done_tons: '', work_date: '', reason: '' });
+  const [deleteReason, setDeleteReason] = useState('');
+  const [statusChangeTarget, setStatusChangeTarget] = useState(null);
+  const [statusReason, setStatusReason] = useState('');
+  const [addRecordReason, setAddRecordReason] = useState('');
+  const [recordActionError, setRecordActionError] = useState('');
 
   useEffect(() => {
     apiFetch(`/api/property/${propert_id}`, {
@@ -117,6 +131,120 @@ const Property = ({ username, authToken }) => {
       });
       setRefreshData(r => !r);
     } catch (error) { console.error(error); }
+  };
+
+  const openEditDialog = (record) => {
+    setSelectedRecord(record);
+    const rawDate = record?.work_date || record?.created_at;
+    const asDate = rawDate ? new Date(rawDate) : null;
+    const workDate = asDate && !Number.isNaN(asDate.getTime()) ? asDate.toISOString().slice(0, 10) : '';
+    setEditPayload({
+      work_done_tons: record?.work_done_tons ?? '',
+      work_date: workDate,
+      reason: ''
+    });
+    setRecordActionError('');
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = (record) => {
+    setSelectedRecord(record);
+    setDeleteReason('');
+    setRecordActionError('');
+    setDeleteDialogOpen(true);
+  };
+
+  const handlePatchRecord = async () => {
+    if (!selectedRecord) return;
+    try {
+      await apiFetch(`/api/work_record/${selectedRecord.record_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          work_done_tons: Number(editPayload.work_done_tons),
+          work_date: editPayload.work_date,
+          reason: editPayload.reason
+        })
+      });
+      setEditDialogOpen(false);
+      setSelectedRecord(null);
+      setRefreshData(r => !r);
+    } catch (error) {
+      setRecordActionError(error?.data?.message || 'Failed to update record.');
+    }
+  };
+
+  const handleDeleteRecord = async () => {
+    if (!selectedRecord) return;
+    try {
+      await apiFetch(`/api/work_record/${selectedRecord.record_id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({ reason: deleteReason })
+      });
+      setDeleteDialogOpen(false);
+      setSelectedRecord(null);
+      setRefreshData(r => !r);
+    } catch (error) {
+      setRecordActionError(error?.data?.message || 'Failed to delete record.');
+    }
+  };
+
+  const openWorkOrderStatusDialog = (workOrder) => {
+    setStatusChangeTarget(workOrder);
+    setStatusReason('');
+    setRecordActionError('');
+    setStatusDialogOpen(true);
+  };
+
+  const handleChangeWorkOrderStatus = async () => {
+    if (!statusChangeTarget) return;
+    try {
+      await apiFetch(`/api/property/${propert_id}/work_order/${statusChangeTarget.work_order_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          is_completed: !statusChangeTarget.is_completed,
+          reason: statusReason
+        })
+      });
+      setStatusDialogOpen(false);
+      setStatusChangeTarget(null);
+      setRefreshData(r => !r);
+    } catch (error) {
+      setRecordActionError(error?.data?.message || 'Failed to update work order status.');
+    }
+  };
+
+  const handleOpenAddWorkRecord = (workOrder) => {
+    setRecordActionError('');
+    if (workOrder.is_completed) {
+      setStatusChangeTarget(workOrder);
+      setStatusReason('');
+      setAddMissedDialogOpen(true);
+      return;
+    }
+    setAddRecordReason('');
+    setActiveWorkOrderId(workOrder.work_order_id);
+    setOpen(true);
+  };
+
+  const handleConfirmAddMissedRecord = () => {
+    if (!statusChangeTarget || !statusReason.trim()) return;
+    setAddRecordReason(statusReason.trim());
+    setAddMissedDialogOpen(false);
+    setActiveWorkOrderId(statusChangeTarget.work_order_id);
+    setOpen(true);
+    setStatusChangeTarget(null);
   };
 
   const handleCreateWorkOrderGroup = async () => {
@@ -172,6 +300,7 @@ const Property = ({ username, authToken }) => {
 
   const pd = property[0].property;
   const workOrders = property[0].work_orders.flat();
+  const isAdmin = (localStorage.getItem('userRole') || '').toLowerCase() === 'admin';
   const progressPct = pd.estimated_work > 0 ? Math.min(100, Math.round((pd.completed_work / pd.estimated_work) * 100)) : 0;
   const labourUsers = users.filter(u => u.role === 'labour');
   const driverUsers = users.filter(u => u.role === 'driver');
@@ -261,6 +390,12 @@ const Property = ({ username, authToken }) => {
                   <span style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>{wo.user_full_name}</span>
                   {badge(wo.user_role, wo.user_role === 'labour' ? 'blue' : 'amber')}
                   {badge(wo.is_completed ? 'Completed' : 'In progress', wo.is_completed ? 'gray' : 'green')}
+                  <button
+                    style={{ ...s.btn, fontSize: 11, padding: '4px 10px' }}
+                    onClick={(e) => { e.stopPropagation(); openWorkOrderStatusDialog(wo); }}
+                  >
+                    {wo.is_completed ? 'Reopen' : 'Mark complete'}
+                  </button>
                 </div>
                 <div style={{ fontSize: 11, color: '#b4b2a9', marginTop: 2 }}>Assigned {fmt(wo.assigned_date, 'date')}</div>
               </div>
@@ -306,7 +441,7 @@ const Property = ({ username, authToken }) => {
                           ) : <span style={{ fontSize: 12, color: '#b4b2a9' }}>None</span>}
                         </div>
                         <div style={{ color: '#888780' }}>{fmt(record.update_date, 'date')}</div>
-                        <div>
+                        <div style={s.wrActions}>
                           <button
                             disabled={record.is_verified}
                             onClick={() => handleApprove(record.record_id, record.work_done_tons)}
@@ -319,6 +454,29 @@ const Property = ({ username, authToken }) => {
                           >
                             {record.is_verified ? 'Approved' : 'Approve'}
                           </button>
+                          <button
+                            disabled={record.is_verified && !isAdmin}
+                            onClick={() => openEditDialog(record)}
+                            style={{
+                              ...s.btn,
+                              padding: '4px 10px',
+                              fontSize: 11
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            disabled={record.is_verified && !isAdmin}
+                            onClick={() => openDeleteDialog(record)}
+                            style={{
+                              ...s.btn,
+                              ...s.btnWarn,
+                              padding: '4px 10px',
+                              fontSize: 11
+                            }}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -328,9 +486,9 @@ const Property = ({ username, authToken }) => {
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button
                     style={{ ...s.btn, ...s.btnGreen, fontSize: 12 }}
-                    onClick={() => { setActiveWorkOrderId(wo.work_order_id); setOpen(true); }}
+                    onClick={() => handleOpenAddWorkRecord(wo)}
                   >
-                    + Add work record
+                    {wo.is_completed ? '+ Add missed record' : '+ Add work record'}
                   </button>
                 </div>
               </div>
@@ -360,10 +518,78 @@ const Property = ({ username, authToken }) => {
         <Dialog maxWidth="sm" open={open} onClose={() => { setOpen(false); setRefreshData(r => !r); }}>
           <DialogTitle>New work record</DialogTitle>
           <DialogContent>
-            <NewWorkRecord token={authToken} workorderId={activeWorkOrderId} />
+            <NewWorkRecord
+              token={authToken}
+              workorderId={activeWorkOrderId}
+              reopenReason={addRecordReason}
+              onSuccess={() => { setOpen(false); setAddRecordReason(''); setRefreshData(r => !r); }}
+            />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => { setOpen(false); setRefreshData(r => !r); }} color="primary">Cancel</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog maxWidth="xs" fullWidth open={statusDialogOpen} onClose={() => setStatusDialogOpen(false)}>
+          <DialogTitle>{statusChangeTarget?.is_completed ? 'Reopen work order?' : 'Mark work order complete?'}</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Reason (required)"
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+              multiline
+              minRows={2}
+              required
+            />
+            {recordActionError && (
+              <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 8 }}>{recordActionError}</div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleChangeWorkOrderStatus}
+              variant="contained"
+              color="primary"
+              disabled={!statusReason.trim()}
+            >
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog maxWidth="xs" fullWidth open={addMissedDialogOpen} onClose={() => setAddMissedDialogOpen(false)}>
+          <DialogTitle>Work order is completed</DialogTitle>
+          <DialogContent>
+            <div style={{ fontSize: 13, color: '#5F5E5A', marginBottom: 8 }}>
+              This order is completed. Adding a record will reopen it. Continue?
+            </div>
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Reason (required)"
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+              multiline
+              minRows={2}
+              required
+            />
+            {recordActionError && (
+              <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 8 }}>{recordActionError}</div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAddMissedDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleConfirmAddMissedRecord}
+              variant="contained"
+              color="primary"
+              disabled={!statusReason.trim()}
+            >
+              Reopen and continue
+            </Button>
           </DialogActions>
         </Dialog>
 
@@ -400,6 +626,74 @@ const Property = ({ username, authToken }) => {
           <DialogActions>
             <Button onClick={() => setOpenAssignment(false)}>Cancel</Button>
             <Button onClick={handleCreateWorkOrderGroup} variant="contained" color="primary">Create group</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog maxWidth="xs" fullWidth open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+          <DialogTitle>Edit work record</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Work done (tons)"
+              type="number"
+              value={editPayload.work_done_tons}
+              onChange={(e) => setEditPayload((prev) => ({ ...prev, work_done_tons: e.target.value }))}
+              inputProps={{ step: '0.01' }}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Work date"
+              type="date"
+              value={editPayload.work_date}
+              onChange={(e) => setEditPayload((prev) => ({ ...prev, work_date: e.target.value }))}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Reason (required)"
+              value={editPayload.reason}
+              onChange={(e) => setEditPayload((prev) => ({ ...prev, reason: e.target.value }))}
+              multiline
+              minRows={2}
+              required
+            />
+            {recordActionError && (
+              <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 8 }}>{recordActionError}</div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handlePatchRecord} variant="contained" color="primary" disabled={!editPayload.reason.trim()}>Save changes</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog maxWidth="xs" fullWidth open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+          <DialogTitle>Delete work record?</DialogTitle>
+          <DialogContent>
+            <div style={{ fontSize: 13, color: '#5F5E5A' }}>
+              This will permanently delete record #{selectedRecord?.record_id}. Are you sure you want to continue?
+            </div>
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Reason (required)"
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              multiline
+              minRows={2}
+              required
+              style={{ marginTop: 12 }}
+            />
+            {recordActionError && (
+              <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 8 }}>{recordActionError}</div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleDeleteRecord} style={{ color: '#791F1F' }} disabled={!deleteReason.trim()}>Delete</Button>
           </DialogActions>
         </Dialog>
 
