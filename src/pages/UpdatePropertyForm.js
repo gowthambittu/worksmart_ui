@@ -161,7 +161,17 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
                         <Grid container spacing={2}>
                             <Grid item xs={12} md={6}><TextField fullWidth name="property_name" label="Property name" value={property.property_name} onChange={handleChange} /></Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="location" label="Location / village" value={property.location} onChange={handleChange} /></Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="land_area_acres" label="Land area (acres)" type="number" value={property.land_area_acres} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    name="land_area_acres"
+                                    label="Land area (acres)"
+                                    type="number"
+                                    value={property.land_area_acres}
+                                    onChange={handleChange}
+                                    inputProps={{ step: '0.01' }}
+                                />
+                            </Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="purchase_date" label="Purchase date" type="date" InputLabelProps={{ shrink: true }} value={property.purchase_date} onChange={handleChange} /></Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="purchase_cost" label="Purchase cost (Rs)" type="number" value={property.purchase_cost} onChange={handleChange} /></Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="estimated_work" label="Estimated work (tons)" type="number" value={property.estimated_work} onChange={handleChange} /></Grid>
