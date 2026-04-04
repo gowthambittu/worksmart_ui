@@ -42,7 +42,9 @@ function NewOutboundRecord({token, workorderId}) {
         event.preventDefault();
     
         const formData = new FormData();
-        formData.append('receipt_proof', receiptProof);
+        if (receiptProof) {
+            formData.append('receipt_proof', receiptProof);
+        }
         formData.append('truck_date', format(new Date(truckDate), 'yyyy-MM-dd HH:mm:ss'));
         formData.append('weight_in_tons', weightInTons);
         formData.append('truck_number', truckNumber);

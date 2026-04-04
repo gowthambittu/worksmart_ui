@@ -302,16 +302,20 @@ const Outbound = ({ username, authToken }) => {
                                         <TableCell>{new Date(record.truck_date).toLocaleDateString()}</TableCell>
                                         <TableCell>{record.weight_in_tons}</TableCell>
                                         <TableCell>
-                                            <img
-                                                src={getImageSrc(record.receipt_proof)}
-                                                alt="Receipt"
-                                                style={{ width: 56, height: 56, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: '1px solid #d8decd' }}
-                                                onClick={() => {
-                                                    setSelectedImage(getImageSrc(record.receipt_proof));
-                                                    setZoomLevel(1);
-                                                    setZoomOpen(true);
-                                                }}
-                                            />
+                                            {record.receipt_proof ? (
+                                                <img
+                                                    src={getImageSrc(record.receipt_proof)}
+                                                    alt="Receipt"
+                                                    style={{ width: 56, height: 56, borderRadius: 6, objectFit: 'cover', cursor: 'pointer', border: '1px solid #d8decd' }}
+                                                    onClick={() => {
+                                                        setSelectedImage(getImageSrc(record.receipt_proof));
+                                                        setZoomLevel(1);
+                                                        setZoomOpen(true);
+                                                    }}
+                                                />
+                                            ) : (
+                                                <span style={{ fontSize: 12, color: '#888780' }}>—</span>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Chip
