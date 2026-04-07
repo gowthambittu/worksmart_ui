@@ -248,8 +248,8 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
 
                         <Typography style={sectionTitleStyle}>Labour & cost</Typography>
                         <Grid container spacing={2}>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_labour" label="Cost to labour (Rs/ton)" type="number" value={property.cost_to_labour} onChange={handleChange} /></Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_driver" label="Cost to driver (Rs/ton)" type="number" value={property.cost_to_driver} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_labour" label="Default labour rate (Rs/ton)" type="number" value={property.cost_to_labour} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_driver" label="Default driver rate (Rs/ton)" type="number" value={property.cost_to_driver} onChange={handleChange} /></Grid>
                         </Grid>
 
                         {errorMessage && (

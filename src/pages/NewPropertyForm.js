@@ -105,11 +105,6 @@ const NewPropertyForm = ({ token, onSuccess }) => {
     const handleSubmit = (event) => {
         event.preventDefault();
 
-        if (!property.assigned_labour_id && !property.assigned_driver_id) {
-            setErrorMessage('Please assign at least one user group (labour or driver).');
-            return;
-        }
-
         const payload = { ...property };
 
         if (payload.purchase_date) {
@@ -304,8 +299,8 @@ const NewPropertyForm = ({ token, onSuccess }) => {
                                     </Select>
                                 </FormControl>
                             </Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_labour" label="Cost to labour (Rs/ton)" type="number" onChange={handleChange} /></Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_driver" label="Cost to driver (Rs/ton)" type="number" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_labour" label="Default labour rate (Rs/ton)" type="number" onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}><TextField fullWidth name="cost_to_driver" label="Default driver rate (Rs/ton)" type="number" onChange={handleChange} /></Grid>
                         </Grid>
 
                         {errorMessage && (

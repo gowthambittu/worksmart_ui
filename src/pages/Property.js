@@ -92,8 +92,16 @@ const Property = ({ username, authToken }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [openAssignment, setOpenAssignment] = useState(false);
   const [users, setUsers] = useState([]);
-  const [assignment, setAssignment] = useState({ assigned_labour_id: '', assigned_driver_id: '' });
+  const [assignment, setAssignment] = useState({
+    assigned_labour_id: '',
+    assigned_driver_id: '',
+    cost_to_labour: '',
+    cost_to_driver: '',
+  });
   const [assignmentError, setAssignmentError] = useState('');
+  const [rateDialogOpen, setRateDialogOpen] = useState(false);
+  const [rateTarget, setRateTarget] = useState(null);
+  const [ratePayload, setRatePayload] = useState({ cost_to_labour: '', cost_to_driver: '', reason: '' });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
@@ -255,6 +263,8 @@ const Property = ({ username, authToken }) => {
     const payload = {};
     if (assignment.assigned_labour_id) payload.assigned_labour_id = Number(assignment.assigned_labour_id);
     if (assignment.assigned_driver_id) payload.assigned_driver_id = Number(assignment.assigned_driver_id);
+    if (assignment.cost_to_labour !== '') payload.cost_to_labour = Number(assignment.cost_to_labour);
+    if (assignment.cost_to_driver !== '') payload.cost_to_driver = Number(assignment.cost_to_driver);
     try {
       const res = await apiFetch(`/api/property/${propert_id}/work_order`, {
         method: 'POST',
@@ -263,9 +273,48 @@ const Property = ({ username, authToken }) => {
       });
       if (res.data.status === 'fail') { setAssignmentError(res.data.message); return; }
       setOpenAssignment(false);
-      setAssignment({ assigned_labour_id: '', assigned_driver_id: '' });
+      setAssignment({
+        assigned_labour_id: '',
+        assigned_driver_id: '',
+        cost_to_labour: '',
+        cost_to_driver: '',
+      });
       setRefreshData(r => !r);
     } catch (error) { setAssignmentError(error?.data?.message || 'Failed.'); }
+  };
+
+  const openRateDialog = (workOrder) => {
+    setRateTarget(workOrder);
+    setRatePayload({
+      cost_to_labour: workOrder.cost_to_labour ?? '',
+      cost_to_driver: workOrder.cost_to_driver ?? '',
+      reason: '',
+    });
+    setRecordActionError('');
+    setRateDialogOpen(true);
+  };
+
+  const handleUpdateWorkOrderRates = async () => {
+    if (!rateTarget) return;
+    try {
+      await apiFetch(`/api/property/${propert_id}/work_order/${rateTarget.work_order_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          cost_to_labour: ratePayload.cost_to_labour === '' ? null : Number(ratePayload.cost_to_labour),
+          cost_to_driver: ratePayload.cost_to_driver === '' ? null : Number(ratePayload.cost_to_driver),
+          reason: ratePayload.reason
+        })
+      });
+      setRateDialogOpen(false);
+      setRateTarget(null);
+      setRefreshData(r => !r);
+    } catch (error) {
+      setRecordActionError(error?.data?.message || 'Failed to update work order rates.');
+    }
   };
 
   const exportWorkOrdersToPDF = (workOrder, propertyDetails) => {
@@ -345,8 +394,8 @@ const Property = ({ username, authToken }) => {
               { label: 'Land area', val: `${pd.land_area_acres} ac` },
               { label: 'Purchase cost', val: fmt(pd.purchase_cost) },
               { label: 'Purchase date', val: fmt(pd.purchase_date, 'date') },
-              { label: 'Cost / labour ton', val: fmt(pd.cost_to_labour) },
-              { label: 'Cost / driver ton', val: fmt(pd.cost_to_driver) },
+              { label: 'Default labour rate', val: fmt(pd.cost_to_labour) },
+              { label: 'Default driver rate', val: fmt(pd.cost_to_driver) },
               { label: 'Completed work', val: `${pd.completed_work} t`, warn: true },
             ].map((m, i) => (
               <div key={i} style={{ ...s.metric, ...(m.warn ? { background: '#FAEEDA' } : {}) }}>
@@ -396,6 +445,12 @@ const Property = ({ username, authToken }) => {
                   >
                     {wo.is_completed ? 'Reopen' : 'Mark complete'}
                   </button>
+                  <button
+                    style={{ ...s.btn, fontSize: 11, padding: '4px 10px' }}
+                    onClick={(e) => { e.stopPropagation(); openRateDialog(wo); }}
+                  >
+                    Edit rates
+                  </button>
                 </div>
                 <div style={{ fontSize: 11, color: '#b4b2a9', marginTop: 2 }}>Assigned {fmt(wo.assigned_date, 'date')}</div>
               </div>
@@ -403,6 +458,8 @@ const Property = ({ username, authToken }) => {
                 <div><div style={s.woMetricLabel}>Work done</div><div style={s.woMetricVal}>{wo.total_work_done} t</div></div>
                 <div><div style={s.woMetricLabel}>Earnings</div><div style={s.woMetricVal}>₹{wo.total_earnings}</div></div>
                 <div><div style={s.woMetricLabel}>Paid out</div><div style={s.woMetricVal}>{wo.paid_out || '—'}</div></div>
+                <div><div style={s.woMetricLabel}>Labour rate</div><div style={s.woMetricVal}>{fmt(wo.cost_to_labour)}</div></div>
+                <div><div style={s.woMetricLabel}>Driver rate</div><div style={s.woMetricVal}>{fmt(wo.cost_to_driver)}</div></div>
               </div>
               <button
                 style={{ ...s.btn, fontSize: 11, marginLeft: 'auto' }}
@@ -619,6 +676,22 @@ const Property = ({ username, authToken }) => {
                 ))}
               </Select>
             </FormControl>
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Labour rate for this group (optional)"
+              type="number"
+              value={assignment.cost_to_labour}
+              onChange={e => setAssignment(a => ({ ...a, cost_to_labour: e.target.value }))}
+            />
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Driver rate for this group (optional)"
+              type="number"
+              value={assignment.cost_to_driver}
+              onChange={e => setAssignment(a => ({ ...a, cost_to_driver: e.target.value }))}
+            />
             {assignmentError && (
               <div style={{ fontSize: 13, color: '#A32D2D', marginTop: 8 }}>{assignmentError}</div>
             )}
@@ -626,6 +699,47 @@ const Property = ({ username, authToken }) => {
           <DialogActions>
             <Button onClick={() => setOpenAssignment(false)}>Cancel</Button>
             <Button onClick={handleCreateWorkOrderGroup} variant="contained" color="primary">Create group</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog maxWidth="xs" fullWidth open={rateDialogOpen} onClose={() => setRateDialogOpen(false)}>
+          <DialogTitle>Edit work order rates</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Labour rate"
+              type="number"
+              value={ratePayload.cost_to_labour}
+              onChange={(e) => setRatePayload((prev) => ({ ...prev, cost_to_labour: e.target.value }))}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Driver rate"
+              type="number"
+              value={ratePayload.cost_to_driver}
+              onChange={(e) => setRatePayload((prev) => ({ ...prev, cost_to_driver: e.target.value }))}
+            />
+            <TextField
+              fullWidth
+              margin="dense"
+              label="Reason (required)"
+              value={ratePayload.reason}
+              onChange={(e) => setRatePayload((prev) => ({ ...prev, reason: e.target.value }))}
+              multiline
+              minRows={2}
+              required
+            />
+            {recordActionError && (
+              <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 8 }}>{recordActionError}</div>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUpdateWorkOrderRates} variant="contained" color="primary" disabled={!ratePayload.reason.trim()}>
+              Save rates
+            </Button>
           </DialogActions>
         </Dialog>
 
