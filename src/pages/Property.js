@@ -330,7 +330,7 @@ const Property = ({ username, authToken }) => {
     doc.text(`Paid Out: ${workOrder.paid_out || '—'} tons`, 120, 48);
     const rows = (workOrder.work_records || [])
       .filter(r => r.is_verified && r.work_done_tons >= 0)
-      .map(r => [r.record_id, r.work_done_tons, fmt(r.created_at, 'date')]);
+      .map(r => [r.record_id, r.work_done_tons, fmt(r.work_date || r.created_at, 'date')]);
     doc.autoTable(['Record ID', 'Work Done (tons)', 'Date'], rows, { startY: 56 });
     doc.save(`work_order_${workOrder.work_order_id}.pdf`);
   };
@@ -486,7 +486,7 @@ const Property = ({ username, authToken }) => {
                         <div style={{ color: '#888780' }}>#{record.record_id}</div>
                         <div style={{ fontWeight: 500 }}>{record.work_done_tons}</div>
                         <div>{badge(record.is_verified ? 'Yes' : 'No', record.is_verified ? 'green' : 'amber')}</div>
-                        <div style={{ color: '#888780' }}>{fmt(record.created_at, 'date')}</div>
+                        <div style={{ color: '#888780' }}>{fmt(record.work_date || record.created_at, 'date')}</div>
                         <div>
                           {record.proof_of_work_file_path ? (
                             <img
