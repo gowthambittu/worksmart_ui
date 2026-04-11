@@ -328,8 +328,15 @@ const Property = ({ username, authToken }) => {
     doc.text(`Total Earnings: ₹${workOrder.total_earnings}`, 120, 32);
     doc.text(`Work Done: ${workOrder.total_work_done} tons`, 120, 40);
     doc.text(`Paid Out: ${workOrder.paid_out || '—'} tons`, 120, 48);
-    const rows = (workOrder.work_records || [])
+    const sortedRecords = (workOrder.work_records || [])
       .filter(r => r.is_verified && (r.work_done_kgs ?? ((r.work_done_tons ?? 0) * 1000)) >= 0)
+      .sort((a, b) => {
+        const aTime = new Date(a.work_date || a.created_at || 0).getTime();
+        const bTime = new Date(b.work_date || b.created_at || 0).getTime();
+        if (aTime !== bTime) return aTime - bTime;
+        return (a.record_id || 0) - (b.record_id || 0);
+      });
+    const rows = sortedRecords
       .map(r => [r.record_id, (r.work_done_kgs ?? ((r.work_done_tons ?? 0) * 1000)), fmt(r.work_date || r.created_at, 'date')]);
     doc.autoTable(['Record ID', 'Work Done (kgs)', 'Date'], rows, { startY: 56 });
     doc.save(`work_order_${workOrder.work_order_id}.pdf`);
