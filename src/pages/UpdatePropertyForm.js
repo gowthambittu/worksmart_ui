@@ -63,7 +63,7 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
         crop_type: '',
         season: '',
         harvest_count: '',
-        plant_spacing_ft: '',
+        plant_spacing: '',
         soil_type: '',
         is_irrigated: false,
         irrigation_type: '',
@@ -86,7 +86,10 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
             crop_type: propertyData.crop_type ?? '',
             season: propertyData.season ?? '',
             harvest_count: propertyData.harvest_count ?? '',
-            plant_spacing_ft: propertyData.plant_spacing_ft ?? '',
+            plant_spacing:
+                propertyData.plant_spacing_row_in && propertyData.plant_spacing_col_in
+                    ? `${propertyData.plant_spacing_row_in}*${propertyData.plant_spacing_col_in}`
+                    : (propertyData.plant_spacing_ft ? `${propertyData.plant_spacing_ft * 12}*${propertyData.plant_spacing_ft * 12}` : ''),
             soil_type: propertyData.soil_type ?? '',
             is_irrigated: propertyData.is_irrigated ?? false,
             irrigation_type: propertyData.irrigation_type ?? '',
@@ -124,7 +127,10 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
         payload.cost_to_labour = toNumberOrNull(payload.cost_to_labour);
         payload.cost_to_driver = toNumberOrNull(payload.cost_to_driver);
         payload.harvest_count = toNumberOrNull(payload.harvest_count);
-        payload.plant_spacing_ft = toNumberOrNull(payload.plant_spacing_ft);
+        payload.plant_spacing = (payload.plant_spacing || '').trim();
+        if (!payload.plant_spacing) {
+            delete payload.plant_spacing;
+        }
         payload.avg_yield_per_acre = toNumberOrNull(payload.avg_yield_per_acre);
 
         apiFetch(`/api/property/${propertyData.property_id}`, {
@@ -203,7 +209,17 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
                                 </FormControl>
                             </Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="harvest_count" label="Harvest count (previous seasons)" type="number" value={property.harvest_count} onChange={handleChange} /></Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="plant_spacing_ft" label="Plant spacing (feet)" type="number" value={property.plant_spacing_ft} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    name="plant_spacing"
+                                    label="Plant spacing (inches)"
+                                    placeholder="e.g. 30*40"
+                                    value={property.plant_spacing}
+                                    onChange={handleChange}
+                                    helperText="Row x Column spacing in inches"
+                                />
+                            </Grid>
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth>
                                     <InputLabel>Soil type</InputLabel>

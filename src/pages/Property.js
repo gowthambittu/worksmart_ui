@@ -107,7 +107,7 @@ const Property = ({ username, authToken }) => {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [addMissedDialogOpen, setAddMissedDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [editPayload, setEditPayload] = useState({ work_done_tons: '', work_date: '', reason: '' });
+  const [editPayload, setEditPayload] = useState({ work_done_kgs: '', work_date: '', reason: '' });
   const [deleteReason, setDeleteReason] = useState('');
   const [statusChangeTarget, setStatusChangeTarget] = useState(null);
   const [statusReason, setStatusReason] = useState('');
@@ -130,12 +130,12 @@ const Property = ({ username, authToken }) => {
     }).then(({ data }) => setUsers(data.data || [])).catch(console.error);
   }, []);
 
-  const handleApprove = async (recordId, work_done) => {
+  const handleApprove = async (recordId, work_done_kgs) => {
     try {
       await apiFetch('/api/work_record', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-        body: JSON.stringify({ record_id: recordId, is_verified: '1', work_done })
+        body: JSON.stringify({ record_id: recordId, is_verified: '1', work_done_kgs })
       });
       setRefreshData(r => !r);
     } catch (error) { console.error(error); }
@@ -147,7 +147,7 @@ const Property = ({ username, authToken }) => {
     const asDate = rawDate ? new Date(rawDate) : null;
     const workDate = asDate && !Number.isNaN(asDate.getTime()) ? asDate.toISOString().slice(0, 10) : '';
     setEditPayload({
-      work_done_tons: record?.work_done_tons ?? '',
+      work_done_kgs: record?.work_done_kgs ?? ((record?.work_done_tons ?? 0) * 1000),
       work_date: workDate,
       reason: ''
     });
@@ -172,7 +172,7 @@ const Property = ({ username, authToken }) => {
           Authorization: `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({
-          work_done_tons: Number(editPayload.work_done_tons),
+          work_done_kgs: Number(editPayload.work_done_kgs),
           work_date: editPayload.work_date,
           reason: editPayload.reason
         })
@@ -329,9 +329,9 @@ const Property = ({ username, authToken }) => {
     doc.text(`Work Done: ${workOrder.total_work_done} tons`, 120, 40);
     doc.text(`Paid Out: ${workOrder.paid_out || '—'} tons`, 120, 48);
     const rows = (workOrder.work_records || [])
-      .filter(r => r.is_verified && r.work_done_tons >= 0)
-      .map(r => [r.record_id, r.work_done_tons, fmt(r.work_date || r.created_at, 'date')]);
-    doc.autoTable(['Record ID', 'Work Done (tons)', 'Date'], rows, { startY: 56 });
+      .filter(r => r.is_verified && (r.work_done_kgs ?? ((r.work_done_tons ?? 0) * 1000)) >= 0)
+      .map(r => [r.record_id, (r.work_done_kgs ?? ((r.work_done_tons ?? 0) * 1000)), fmt(r.work_date || r.created_at, 'date')]);
+    doc.autoTable(['Record ID', 'Work Done (kgs)', 'Date'], rows, { startY: 56 });
     doc.save(`work_order_${workOrder.work_order_id}.pdf`);
   };
 
@@ -406,11 +406,12 @@ const Property = ({ username, authToken }) => {
           </div>
 
           {/* ML attributes */}
-          {(pd.soil_type || pd.irrigation_type || pd.plant_spacing_ft || pd.harvest_count || pd.fertilizer_type || pd.avg_yield_per_acre) && (
+          {(pd.soil_type || pd.irrigation_type || pd.plant_spacing_ft || pd.plant_spacing_row_in || pd.plant_spacing_col_in || pd.harvest_count || pd.fertilizer_type || pd.avg_yield_per_acre) && (
             <div style={s.mlRow}>
               {pd.soil_type && <div style={s.mlField}><div style={s.mlLabel}>Soil type <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 20, background: '#EAF3DE', color: '#3B6D11', border: '1px dashed #97C459' }}>ML</span></div><div style={s.mlVal}>{pd.soil_type.replace(/_/g, ' ')}</div></div>}
               {pd.irrigation_type && <div style={s.mlField}><div style={s.mlLabel}>Irrigation</div><div style={s.mlVal}>{pd.irrigation_type.replace(/_/g, ' ')} · {pd.is_irrigated ? 'Irrigated' : 'Not irrigated'}</div></div>}
-              {pd.plant_spacing_ft && <div style={s.mlField}><div style={s.mlLabel}>Plant spacing</div><div style={s.mlVal}>{pd.plant_spacing_ft} ft</div></div>}
+              {(pd.plant_spacing_row_in && pd.plant_spacing_col_in) && <div style={s.mlField}><div style={s.mlLabel}>Plant spacing</div><div style={s.mlVal}>{pd.plant_spacing_row_in} x {pd.plant_spacing_col_in} in</div></div>}
+              {(!pd.plant_spacing_row_in || !pd.plant_spacing_col_in) && pd.plant_spacing_ft && <div style={s.mlField}><div style={s.mlLabel}>Plant spacing</div><div style={s.mlVal}>{pd.plant_spacing_ft} ft</div></div>}
               {pd.harvest_count != null && <div style={s.mlField}><div style={s.mlLabel}>Harvest count</div><div style={s.mlVal}>{pd.harvest_count} seasons</div></div>}
               {pd.fertilizer_type && <div style={s.mlField}><div style={s.mlLabel}>Fertilizer</div><div style={s.mlVal}>{pd.fertilizer_type.charAt(0).toUpperCase() + pd.fertilizer_type.slice(1)}</div></div>}
               {pd.avg_yield_per_acre && <div style={s.mlField}><div style={s.mlLabel}>Avg yield / acre</div><div style={s.mlVal}>{pd.avg_yield_per_acre} tons</div></div>}
@@ -478,13 +479,13 @@ const Property = ({ username, authToken }) => {
                 <div style={s.wrScrollWrap}>
                   <div style={s.wrTable}>
                     <div style={s.wrTableHeader}>
-                      <div>ID</div><div>Tons</div><div>Verified</div><div>Date</div><div>Proof</div><div>Updated</div><div>Action</div>
+                      <div>ID</div><div>Kgs</div><div>Verified</div><div>Date</div><div>Proof</div><div>Updated</div><div>Action</div>
                     </div>
 
                     {(wo.work_records || []).map(record => (
                       <div key={record.record_id} style={s.wrRow}>
                         <div style={{ color: '#888780' }}>#{record.record_id}</div>
-                        <div style={{ fontWeight: 500 }}>{record.work_done_tons}</div>
+                        <div style={{ fontWeight: 500 }}>{record.work_done_kgs ?? ((record.work_done_tons ?? 0) * 1000)}</div>
                         <div>{badge(record.is_verified ? 'Yes' : 'No', record.is_verified ? 'green' : 'amber')}</div>
                         <div style={{ color: '#888780' }}>{fmt(record.work_date || record.created_at, 'date')}</div>
                         <div>
@@ -501,7 +502,7 @@ const Property = ({ username, authToken }) => {
                         <div style={s.wrActions}>
                           <button
                             disabled={record.is_verified}
-                            onClick={() => handleApprove(record.record_id, record.work_done_tons)}
+                            onClick={() => handleApprove(record.record_id, record.work_done_kgs ?? ((record.work_done_tons ?? 0) * 1000))}
                             style={{
                               padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: record.is_verified ? 'default' : 'pointer',
                               border: '0.5px solid', ...(record.is_verified
@@ -749,10 +750,10 @@ const Property = ({ username, authToken }) => {
             <TextField
               fullWidth
               margin="dense"
-              label="Work done (tons)"
+              label="Work done (kgs)"
               type="number"
-              value={editPayload.work_done_tons}
-              onChange={(e) => setEditPayload((prev) => ({ ...prev, work_done_tons: e.target.value }))}
+              value={editPayload.work_done_kgs}
+              onChange={(e) => setEditPayload((prev) => ({ ...prev, work_done_kgs: e.target.value }))}
               inputProps={{ step: '0.01' }}
             />
             <TextField

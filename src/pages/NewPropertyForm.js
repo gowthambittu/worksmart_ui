@@ -60,7 +60,7 @@ const NewPropertyForm = ({ token, onSuccess }) => {
         crop_type: '',
         season: '',
         harvest_count: '',
-        plant_spacing_ft: '',
+        plant_spacing: '',
         soil_type: '',
         is_irrigated: false,
         irrigation_type: '',
@@ -117,7 +117,10 @@ const NewPropertyForm = ({ token, onSuccess }) => {
         payload.cost_to_labour = toNumberOrNull(payload.cost_to_labour);
         payload.cost_to_driver = toNumberOrNull(payload.cost_to_driver);
         payload.harvest_count = toNumberOrNull(payload.harvest_count);
-        payload.plant_spacing_ft = toNumberOrNull(payload.plant_spacing_ft);
+        payload.plant_spacing = (payload.plant_spacing || '').trim();
+        if (!payload.plant_spacing) {
+            delete payload.plant_spacing;
+        }
         payload.avg_yield_per_acre = toNumberOrNull(payload.avg_yield_per_acre);
 
         if (payload.assigned_labour_id) {
@@ -220,7 +223,17 @@ const NewPropertyForm = ({ token, onSuccess }) => {
                                 </FormControl>
                             </Grid>
                             <Grid item xs={12} md={6}><TextField fullWidth name="harvest_count" label="Harvest count (previous seasons)" type="number" value={property.harvest_count} onChange={handleChange} /></Grid>
-                            <Grid item xs={12} md={6}><TextField fullWidth name="plant_spacing_ft" label="Plant spacing (feet)" type="number" value={property.plant_spacing_ft} onChange={handleChange} /></Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    name="plant_spacing"
+                                    label="Plant spacing (inches)"
+                                    placeholder="e.g. 30*40"
+                                    value={property.plant_spacing}
+                                    onChange={handleChange}
+                                    helperText="Row x Column spacing in inches"
+                                />
+                            </Grid>
                             <Grid item xs={12} md={6}>
                                 <FormControl fullWidth>
                                     <InputLabel>Soil type</InputLabel>

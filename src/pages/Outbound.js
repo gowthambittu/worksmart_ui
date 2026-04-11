@@ -90,7 +90,7 @@ const Outbound = ({ username, authToken }) => {
         outbound_id: '',
         truck_number: '',
         truck_date: '',
-        weight_in_tons: '',
+        weight_in_kgs: '',
         created_at: '',
         is_verified: '',
         created_id: '',
@@ -185,7 +185,8 @@ const Outbound = ({ username, authToken }) => {
 
         const filteredRecords = records.filter((record) => {
             const recordDate = new Date(record.truck_date).setHours(0, 0, 0, 0);
-            return record.is_verified && recordDate >= from && recordDate <= to && record.weight_in_tons >= 0;
+            const weightInKgs = Number(record.weight_in_kgs ?? ((record.weight_in_tons ?? 0) * 1000));
+            return record.is_verified && recordDate >= from && recordDate <= to && weightInKgs >= 0;
         });
 
         const doc = new jsPDF();
@@ -193,16 +194,17 @@ const Outbound = ({ username, authToken }) => {
         doc.text(`Truck Records ${startDate} ${endDate}`, 50, 22);
         doc.setFontSize(11);
 
-        const tableColumn = ['Truck Date', 'Truck Number', 'Weight In Tons'];
+        const tableColumn = ['Truck Date', 'Truck Number', 'Weight In Kgs'];
         const tableRows = [];
         let totalWeight = 0;
 
         filteredRecords.forEach((record) => {
-            totalWeight += parseFloat(record.weight_in_tons);
-            tableRows.push([record.truck_date.slice(0, 10), record.truck_number, record.weight_in_tons]);
+            const weightInKgs = Number(record.weight_in_kgs ?? ((record.weight_in_tons ?? 0) * 1000));
+            totalWeight += weightInKgs;
+            tableRows.push([record.truck_date.slice(0, 10), record.truck_number, weightInKgs]);
         });
 
-        doc.text(`Total Weight: ${totalWeight}`, 14, 30);
+        doc.text(`Total Weight (kgs): ${totalWeight}`, 14, 30);
         doc.autoTable(tableColumn, tableRows, { startY: 38 });
         doc.save(`outbound_records_${startDate}_${endDate}.pdf`);
 
@@ -280,7 +282,7 @@ const Outbound = ({ username, authToken }) => {
                                     </TableCell>
                                     <TableCell style={styles.th}>
                                         Weight
-                                        <InputBase value={filters.weight_in_tons} onChange={handleFilterChange('weight_in_tons')} placeholder="Filter" style={styles.filterInput} />
+                                        <InputBase value={filters.weight_in_kgs} onChange={handleFilterChange('weight_in_kgs')} placeholder="Filter" style={styles.filterInput} />
                                     </TableCell>
                                     <TableCell style={styles.th}>Receipt</TableCell>
                                     <TableCell style={styles.th}>
@@ -300,7 +302,7 @@ const Outbound = ({ username, authToken }) => {
                                         <TableCell>{record.outbound_id}</TableCell>
                                         <TableCell>{record.truck_number}</TableCell>
                                         <TableCell>{new Date(record.truck_date).toLocaleDateString()}</TableCell>
-                                        <TableCell>{record.weight_in_tons}</TableCell>
+                                        <TableCell>{record.weight_in_kgs ?? ((record.weight_in_tons ?? 0) * 1000)}</TableCell>
                                         <TableCell>
                                             {record.receipt_proof ? (
                                                 <img

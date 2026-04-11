@@ -123,7 +123,7 @@ const AdminDashboard = ({ username, authToken, handleAfterLogin }) => {
                   }}>
                     <div>
                       <div style={{ fontWeight: 500 }}>{t.truck_number}</div>
-                      <div style={{ fontSize: 11, color: '#888780' }}>{t.truck_date} · {t.weight_in_tons}t</div>
+                      <div style={{ fontSize: 11, color: '#888780' }}>{t.truck_date} · {t.weight_in_kgs ?? ((t.weight_in_tons ?? 0) * 1000)} kg</div>
                     </div>
                     <span style={{
                       fontSize: 11, padding: '3px 8px', borderRadius: 20,

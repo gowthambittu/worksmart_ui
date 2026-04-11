@@ -24,7 +24,7 @@ import { apiFetch } from '../utils/apiClient';
 function NewOutboundRecord({token, workorderId}) {
     // const classes = useStyles(); 
     const [truckNumber, setTruckNumber] = useState('');
-    const [weightInTons, setWeightInTons] = useState('');
+    const [weightInKgs, setWeightInKgs] = useState('');
     const [receiptProof, setReceiptProof] = useState(null);
     const [truckDate, setTruckDate] = useState('');
     const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -46,7 +46,7 @@ function NewOutboundRecord({token, workorderId}) {
             formData.append('receipt_proof', receiptProof);
         }
         formData.append('truck_date', format(new Date(truckDate), 'yyyy-MM-dd HH:mm:ss'));
-        formData.append('weight_in_tons', weightInTons);
+        formData.append('weight_in_kgs', weightInKgs);
         formData.append('truck_number', truckNumber);
     
         apiFetch('/api/outbound_record', {
@@ -60,7 +60,7 @@ function NewOutboundRecord({token, workorderId}) {
             console.log(data);
             setOpenSnackbar(true); // Open the snackbar
             // Clear the state variables
-            setWeightInTons('');
+            setWeightInKgs('');
             setReceiptProof(null);
             setTruckDate('');
             setTruckNumber('');
@@ -87,10 +87,10 @@ function NewOutboundRecord({token, workorderId}) {
                     </Box>
                     <Box mb={5}>
                     <TextField
-                        label="Weight in Tons"
+                        label="Weight in Kgs"
                         type="number"
-                        value={weightInTons}
-                        onChange={(e) => setWeightInTons(e.target.value)}
+                        value={weightInKgs}
+                        onChange={(e) => setWeightInKgs(e.target.value)}
                         fullWidth
                     />
                     </Box>

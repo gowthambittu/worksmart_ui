@@ -23,7 +23,7 @@ import { apiFetch } from '../utils/apiClient';
 
 function NewWorkRecord({token, workorderId, reopenReason = '', onSuccess}) {
     // const classes = useStyles();
-    const [workDone, setWorkDone] = useState('');
+    const [workDoneKgs, setWorkDoneKgs] = useState('');
     const [proofOfWork, setProofOfWork] = useState(null);
     const [workDate, setWorkDate] = useState('');
     const [reason, setReason] = useState(reopenReason || '');
@@ -51,7 +51,7 @@ function NewWorkRecord({token, workorderId, reopenReason = '', onSuccess}) {
         }
         formData.append('work_order_id', workorderId);
         formData.append('work_date', format(new Date(workDate), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\''));
-        formData.append('work_done_tons', workDone);
+        formData.append('work_done_kgs', workDoneKgs);
         formData.append('is_verified', false);
         if (reason && reason.trim()) {
             formData.append('reason', reason.trim());
@@ -68,7 +68,7 @@ function NewWorkRecord({token, workorderId, reopenReason = '', onSuccess}) {
             console.log(data);
             setOpenSnackbar(true); // Open the snackbar
             // Clear the state variables
-            setWorkDone('');
+            setWorkDoneKgs('');
             setProofOfWork(null);
             setWorkDate('');
             setReason('');
@@ -89,9 +89,9 @@ function NewWorkRecord({token, workorderId, reopenReason = '', onSuccess}) {
         <form onSubmit={handleSubmit}>
             <Box mb={5}>
                 <TextField
-                    label="Work done (in tons)"
-                    value={workDone}
-                    onChange={(e) => setWorkDone(e.target.value)}
+                    label="Work done (in kgs)"
+                    value={workDoneKgs}
+                    onChange={(e) => setWorkDoneKgs(e.target.value)}
                     required
                 />
             </Box>
