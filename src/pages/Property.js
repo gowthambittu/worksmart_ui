@@ -358,6 +358,7 @@ const Property = ({ username, authToken }) => {
   const workOrders = property[0].work_orders.flat();
   const isAdmin = (localStorage.getItem('userRole') || '').toLowerCase() === 'admin';
   const progressPct = pd.estimated_work > 0 ? Math.min(100, Math.round((pd.completed_work / pd.estimated_work) * 100)) : 0;
+  const isPropertyCompleted = workOrders.length > 0 && workOrders.every((wo) => Boolean(wo.is_completed));
   const labourUsers = users.filter(u => u.role === 'labour');
   const driverUsers = users.filter(u => u.role === 'driver');
 
@@ -378,7 +379,7 @@ const Property = ({ username, authToken }) => {
               <div style={s.propLocation}>{pd.location} · Created {fmt(pd.created_at, 'date')}</div>
             </div>
             <div style={s.badgeRow}>
-              {badge(progressPct >= 100 ? 'Completed' : 'Active', progressPct >= 100 ? 'gray' : 'green')}
+              {badge(isPropertyCompleted ? 'Completed' : 'Active', isPropertyCompleted ? 'gray' : 'green')}
               {pd.crop_type && badge(pd.crop_type.replace(/_/g, ' '), 'blue')}
               {pd.season && badge(pd.season.charAt(0).toUpperCase() + pd.season.slice(1), 'gray')}
             </div>

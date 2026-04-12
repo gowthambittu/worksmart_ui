@@ -79,6 +79,9 @@ const humanizeValue = (value) => {
 };
 
 const getStatus = (item) => {
+    if (item.all_work_orders_completed) {
+        return { label: 'Completed', color: '#0C447C', bg: '#E6F1FB' };
+    }
     const estimated = Number(item.estimated_work || 0);
     const completed = Number(item.completed_work || 0);
     if (estimated > 0 && completed >= estimated) {
