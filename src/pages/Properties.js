@@ -237,6 +237,9 @@ const Properties = ({ username, authToken }) => {
                                     <div style={styles.meta}>
                                         {item.location || 'Unknown location'} · {humanizeValue(item.soil_type)} · {item.is_irrigated ? 'Irrigated' : 'Rain-fed'}
                                     </div>
+                                    <div style={styles.meta}>
+                                        Labour: {item.active_labour_names_display || '—'}
+                                    </div>
                                     <div style={{ ...styles.meta, marginTop: 8 }}>
                                         {humanizeValue(item.crop_type)} · {humanizeValue(item.season)}
                                     </div>
@@ -281,6 +284,9 @@ const Properties = ({ username, authToken }) => {
                                     <div style={styles.propertyName}>{item.property_name}</div>
                                     <div style={styles.meta}>
                                         {item.location || 'Unknown location'} · {humanizeValue(item.soil_type)} · {item.is_irrigated ? 'Irrigated' : 'Rain-fed'}
+                                    </div>
+                                    <div style={styles.meta}>
+                                        Labour: {item.active_labour_names_display || '—'}
                                     </div>
                                 </div>
 
