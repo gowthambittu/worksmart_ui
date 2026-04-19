@@ -50,6 +50,15 @@ const toNumberOrNull = (value) => {
     return Number.isNaN(parsed) ? null : parsed;
 };
 
+const getRequestErrorMessage = (error, fallbackMessage) => {
+    const backendMessage = typeof error?.data?.message === 'string' ? error.data.message.trim() : '';
+    if (backendMessage) return backendMessage;
+    const rawResponse = typeof error?.data === 'string' ? error.data.trim() : '';
+    if (rawResponse) return rawResponse;
+    if (error?.status) return `${fallbackMessage} (HTTP ${error.status})`;
+    return fallbackMessage;
+};
+
 const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
     const [property, setProperty] = useState({
         property_name: '',
@@ -71,6 +80,7 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
         avg_yield_per_acre: '',
     });
     const [errorMessage, setErrorMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (!propertyData) return;
@@ -112,9 +122,10 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
         setProperty((prev) => ({ ...prev, is_irrigated: event.target.checked }));
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        if (!propertyData?.property_id) return;
+        if (!propertyData?.property_id || isSubmitting) return;
+        setIsSubmitting(true);
 
         const payload = { ...property };
         if (payload.purchase_date) {
@@ -133,25 +144,26 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
         }
         payload.avg_yield_per_acre = toNumberOrNull(payload.avg_yield_per_acre);
 
-        apiFetch(`/api/property/${propertyData.property_id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-        })
-            .then(({ data }) => {
-                if (data.status === 'fail') {
-                    setErrorMessage(data.message || 'Failed to update property.');
-                    return;
-                }
-                setErrorMessage('');
-                if (onSuccess) onSuccess();
-            })
-            .catch(() => {
-                setErrorMessage('Failed to update property.');
+        try {
+            const { data } = await apiFetch(`/api/property/${propertyData.property_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
             });
+            if (data.status === 'fail') {
+                setErrorMessage(data.message || 'Failed to update property.');
+                return;
+            }
+            setErrorMessage('');
+            if (onSuccess) onSuccess();
+        } catch (error) {
+            setErrorMessage(getRequestErrorMessage(error, 'Failed to update property.'));
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -278,9 +290,10 @@ const UpdatePropertyForm = ({ token, propertyData, onSuccess }) => {
                             type="submit"
                             variant="contained"
                             fullWidth
+                            disabled={isSubmitting}
                             style={{ marginTop: 16, background: '#1a1f2e', color: '#fff', textTransform: 'none', fontWeight: 700 }}
                         >
-                            Save property
+                            {isSubmitting ? 'Saving...' : 'Save property'}
                         </Button>
                     </form>
                 </Paper>

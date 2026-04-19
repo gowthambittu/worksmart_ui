@@ -78,6 +78,24 @@ const fmt = (val, type = 'currency') => {
   return val;
 };
 
+const getRequestErrorMessage = (error, fallbackMessage) => {
+  const backendMessage = typeof error?.data?.message === 'string' ? error.data.message.trim() : '';
+  if (backendMessage) return backendMessage;
+  const rawResponse = typeof error?.data === 'string' ? error.data.trim() : '';
+  if (rawResponse) return rawResponse;
+  if (error?.status) return `${fallbackMessage} (HTTP ${error.status})`;
+  return fallbackMessage;
+};
+
+const sortWorkRecordsDesc = (records = []) => (
+  [...records].sort((a, b) => {
+    const aTime = new Date(a?.work_date || a?.created_at || 0).getTime();
+    const bTime = new Date(b?.work_date || b?.created_at || 0).getTime();
+    if (aTime !== bTime) return bTime - aTime;
+    return (b?.record_id || 0) - (a?.record_id || 0);
+  })
+);
+
 const Property = ({ username, authToken }) => {
   const { propert_id } = useParams();
   const navigate = useNavigate();
@@ -113,6 +131,7 @@ const Property = ({ username, authToken }) => {
   const [statusReason, setStatusReason] = useState('');
   const [addRecordReason, setAddRecordReason] = useState('');
   const [recordActionError, setRecordActionError] = useState('');
+  const [isSavingRecordEdit, setIsSavingRecordEdit] = useState(false);
 
   useEffect(() => {
     apiFetch(`/api/property/${propert_id}`, {
@@ -163,8 +182,10 @@ const Property = ({ username, authToken }) => {
   };
 
   const handlePatchRecord = async () => {
-    if (!selectedRecord) return;
+    if (!selectedRecord || isSavingRecordEdit) return;
     try {
+      setRecordActionError('');
+      setIsSavingRecordEdit(true);
       await apiFetch(`/api/work_record/${selectedRecord.record_id}`, {
         method: 'PATCH',
         headers: {
@@ -181,7 +202,9 @@ const Property = ({ username, authToken }) => {
       setSelectedRecord(null);
       setRefreshData(r => !r);
     } catch (error) {
-      setRecordActionError(error?.data?.message || 'Failed to update record.');
+      setRecordActionError(getRequestErrorMessage(error, 'Failed to update record.'));
+    } finally {
+      setIsSavingRecordEdit(false);
     }
   };
 
@@ -490,7 +513,7 @@ const Property = ({ username, authToken }) => {
                       <div>ID</div><div>Kgs</div><div>Verified</div><div>Date</div><div>Proof</div><div>Updated</div><div>Action</div>
                     </div>
 
-                    {(wo.work_records || []).map(record => (
+                    {sortWorkRecordsDesc(wo.work_records || []).map(record => (
                       <div key={record.record_id} style={s.wrRow}>
                         <div style={{ color: '#888780' }}>#{record.record_id}</div>
                         <div style={{ fontWeight: 500 }}>{record.work_done_kgs ?? ((record.work_done_tons ?? 0) * 1000)}</div>
@@ -763,6 +786,7 @@ const Property = ({ username, authToken }) => {
               value={editPayload.work_done_kgs}
               onChange={(e) => setEditPayload((prev) => ({ ...prev, work_done_kgs: e.target.value }))}
               inputProps={{ step: '0.01' }}
+              disabled={isSavingRecordEdit}
             />
             <TextField
               fullWidth
@@ -772,6 +796,7 @@ const Property = ({ username, authToken }) => {
               value={editPayload.work_date}
               onChange={(e) => setEditPayload((prev) => ({ ...prev, work_date: e.target.value }))}
               InputLabelProps={{ shrink: true }}
+              disabled={isSavingRecordEdit}
             />
             <TextField
               fullWidth
@@ -782,14 +807,17 @@ const Property = ({ username, authToken }) => {
               multiline
               minRows={2}
               required
+              disabled={isSavingRecordEdit}
             />
             {recordActionError && (
               <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 8 }}>{recordActionError}</div>
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handlePatchRecord} variant="contained" color="primary" disabled={!editPayload.reason.trim()}>Save changes</Button>
+            <Button onClick={() => setEditDialogOpen(false)} disabled={isSavingRecordEdit}>Cancel</Button>
+            <Button onClick={handlePatchRecord} variant="contained" color="primary" disabled={!editPayload.reason.trim() || isSavingRecordEdit}>
+              {isSavingRecordEdit ? 'Saving...' : 'Save changes'}
+            </Button>
           </DialogActions>
         </Dialog>
 

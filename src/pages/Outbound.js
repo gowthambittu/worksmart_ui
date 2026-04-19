@@ -84,6 +84,21 @@ const getImageSrc = (value) => {
     return `data:image/jpeg;base64,${normalized}`;
 };
 
+const getRequestErrorMessage = (error, fallbackMessage) => {
+    const backendMessage = typeof error?.data?.message === 'string' ? error.data.message.trim() : '';
+    if (backendMessage) return backendMessage;
+    const rawResponse = typeof error?.data === 'string' ? error.data.trim() : '';
+    if (rawResponse) return rawResponse;
+    if (error?.status) return `${fallbackMessage} (HTTP ${error.status})`;
+    return fallbackMessage;
+};
+
+const getRecordDateMs = (record) => {
+    const raw = record?.truck_date || record?.created_at || 0;
+    const ms = new Date(raw).getTime();
+    return Number.isNaN(ms) ? 0 : ms;
+};
+
 const Outbound = ({ username, authToken }) => {
     const [outbound, setOutbound] = useState([]);
     const [refreshData, setRefreshData] = useState(false);
@@ -103,8 +118,8 @@ const Outbound = ({ username, authToken }) => {
         created_id: '',
         update_date: '',
     });
-    const [sort, setSort] = useState(null);
-    const [sortOrder, setSortOrder] = useState('asc');
+    const [sort, setSort] = useState('truck_date');
+    const [sortOrder, setSortOrder] = useState('desc');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [editOpen, setEditOpen] = useState(false);
@@ -112,6 +127,9 @@ const Outbound = ({ username, authToken }) => {
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [editPayload, setEditPayload] = useState({ truck_number: '', truck_date: '', weight_in_kgs: '' });
     const [actionError, setActionError] = useState('');
+    const [approvingRecordId, setApprovingRecordId] = useState(null);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -155,6 +173,16 @@ const Outbound = ({ username, authToken }) => {
 
         if (sort) {
             rows.sort((a, b) => {
+                if (sort === 'truck_date' || sort === 'created_at' || sort === 'update_date') {
+                    const aTime = getRecordDateMs(a);
+                    const bTime = getRecordDateMs(b);
+                    if (aTime !== bTime) {
+                        return sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+                    }
+                    return sortOrder === 'asc'
+                        ? (a.outbound_id || 0) - (b.outbound_id || 0)
+                        : (b.outbound_id || 0) - (a.outbound_id || 0);
+                }
                 const aValue = a[sort];
                 const bValue = b[sort];
                 if (typeof aValue === 'number' && typeof bValue === 'number') {
@@ -170,7 +198,10 @@ const Outbound = ({ username, authToken }) => {
     }, [outbound, filters, sort, sortOrder]);
 
     const handleApprove = async (recordId) => {
+        if (approvingRecordId === recordId) return;
         try {
+            setActionError('');
+            setApprovingRecordId(recordId);
             await apiFetch('/api/outbound_record', {
                 method: 'PUT',
                 headers: {
@@ -181,7 +212,10 @@ const Outbound = ({ username, authToken }) => {
             });
             setRefreshData((prev) => !prev);
         } catch (error) {
+            setActionError(getRequestErrorMessage(error, 'Failed to approve outbound record.'));
             console.error(error);
+        } finally {
+            setApprovingRecordId(null);
         }
     };
 
@@ -201,8 +235,18 @@ const Outbound = ({ username, authToken }) => {
     };
 
     const handleEditSave = async () => {
-        if (!selectedRecord) return;
+        if (!selectedRecord || isSavingEdit) return;
         try {
+            setActionError('');
+            setIsSavingEdit(true);
+            const parsedTruckDate = new Date(editPayload.truck_date);
+            if (!editPayload.truck_date || Number.isNaN(parsedTruckDate.getTime())) {
+                throw new Error('Please provide a valid truck date.');
+            }
+            const parsedWeightInKgs = Number(editPayload.weight_in_kgs);
+            if (!Number.isFinite(parsedWeightInKgs) || parsedWeightInKgs < 0) {
+                throw new Error('Please provide a valid weight in kgs.');
+            }
             await apiFetch(`/api/outbound_record/${selectedRecord.outbound_id}`, {
                 method: 'PATCH',
                 headers: {
@@ -212,14 +256,19 @@ const Outbound = ({ username, authToken }) => {
                 body: JSON.stringify({
                     truck_number: editPayload.truck_number,
                     truck_date: editPayload.truck_date,
-                    weight_in_kgs: Number(editPayload.weight_in_kgs),
+                    weight_in_kgs: parsedWeightInKgs,
                 }),
             });
             setEditOpen(false);
             setSelectedRecord(null);
             setRefreshData((prev) => !prev);
         } catch (error) {
-            setActionError(error?.data?.message || 'Failed to update outbound record.');
+            const failureMessage = error?.message === 'Please provide a valid truck date.' || error?.message === 'Please provide a valid weight in kgs.'
+                ? error.message
+                : getRequestErrorMessage(error, 'Failed to update outbound record.');
+            setActionError(failureMessage);
+        } finally {
+            setIsSavingEdit(false);
         }
     };
 
@@ -230,8 +279,10 @@ const Outbound = ({ username, authToken }) => {
     };
 
     const handleDeleteConfirm = async () => {
-        if (!selectedRecord) return;
+        if (!selectedRecord || isDeleting) return;
         try {
+            setActionError('');
+            setIsDeleting(true);
             await apiFetch(`/api/outbound_record/${selectedRecord.outbound_id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
@@ -240,7 +291,9 @@ const Outbound = ({ username, authToken }) => {
             setSelectedRecord(null);
             setRefreshData((prev) => !prev);
         } catch (error) {
-            setActionError(error?.data?.message || 'Failed to delete outbound record.');
+            setActionError(getRequestErrorMessage(error, 'Failed to delete outbound record.'));
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -314,6 +367,9 @@ const Outbound = ({ username, authToken }) => {
                         <Typography variant="h5" style={styles.title}>Outbound Records</Typography>
                         <Button style={styles.addBtn} onClick={() => setOpen(true)}>+ Add outbound record</Button>
                     </div>
+                    {actionError && (
+                        <div style={{ color: '#A32D2D', fontSize: 13, marginBottom: 10 }}>{actionError}</div>
+                    )}
 
                     <div style={styles.exportRow}>
                         <TextField
@@ -419,11 +475,11 @@ const Outbound = ({ username, authToken }) => {
                                                 <Button
                                                     variant="contained"
                                                     size="small"
-                                                    disabled={record.is_verified}
+                                                    disabled={record.is_verified || approvingRecordId === record.outbound_id}
                                                     onClick={() => handleApprove(record.outbound_id)}
                                                     style={record.is_verified ? styles.actionBtn : styles.actionApprove}
                                                 >
-                                                    {record.is_verified ? 'Approved' : 'Approve'}
+                                                    {record.is_verified ? 'Approved' : (approvingRecordId === record.outbound_id ? 'Approving...' : 'Approve')}
                                                 </Button>
                                                 <Button
                                                     variant="outlined"
@@ -487,7 +543,7 @@ const Outbound = ({ username, authToken }) => {
             <Dialog maxWidth="sm" open={open} onClose={() => { setOpen(false); setRefreshData((prev) => !prev); }} aria-labelledby="form-dialog-title">
                 <DialogTitle id="form-dialog-title">New Outbound Record</DialogTitle>
                 <DialogContent>
-                    <NewOutboundRecord token={authToken} />
+                    <NewOutboundRecord token={authToken} onSuccess={() => { setOpen(false); setRefreshData((prev) => !prev); }} />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => { setOpen(false); setRefreshData((prev) => !prev); }} color="primary">
@@ -505,6 +561,7 @@ const Outbound = ({ username, authToken }) => {
                         label="Truck Number"
                         value={editPayload.truck_number}
                         onChange={(e) => setEditPayload((prev) => ({ ...prev, truck_number: e.target.value }))}
+                        disabled={isSavingEdit}
                     />
                     <TextField
                         fullWidth
@@ -514,6 +571,7 @@ const Outbound = ({ username, authToken }) => {
                         value={editPayload.truck_date}
                         onChange={(e) => setEditPayload((prev) => ({ ...prev, truck_date: e.target.value }))}
                         InputLabelProps={{ shrink: true }}
+                        disabled={isSavingEdit}
                     />
                     <TextField
                         fullWidth
@@ -522,14 +580,17 @@ const Outbound = ({ username, authToken }) => {
                         type="number"
                         value={editPayload.weight_in_kgs}
                         onChange={(e) => setEditPayload((prev) => ({ ...prev, weight_in_kgs: e.target.value }))}
+                        disabled={isSavingEdit}
                     />
                     {actionError && (
                         <div style={{ color: '#A32D2D', fontSize: 12, marginTop: 8 }}>{actionError}</div>
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setEditOpen(false)}>Cancel</Button>
-                    <Button onClick={handleEditSave} variant="contained" color="primary">Save</Button>
+                    <Button onClick={() => setEditOpen(false)} disabled={isSavingEdit}>Cancel</Button>
+                    <Button onClick={handleEditSave} variant="contained" color="primary" disabled={isSavingEdit}>
+                        {isSavingEdit ? 'Saving...' : 'Save'}
+                    </Button>
                 </DialogActions>
             </Dialog>
 
@@ -544,8 +605,10 @@ const Outbound = ({ username, authToken }) => {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-                    <Button onClick={handleDeleteConfirm} style={{ color: '#791F1F' }}>Delete</Button>
+                    <Button onClick={() => setDeleteOpen(false)} disabled={isDeleting}>Cancel</Button>
+                    <Button onClick={handleDeleteConfirm} style={{ color: '#791F1F' }} disabled={isDeleting}>
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Layout>

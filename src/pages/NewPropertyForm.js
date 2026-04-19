@@ -45,6 +45,15 @@ const toNumberOrNull = (value) => {
     return Number.isNaN(parsed) ? null : parsed;
 };
 
+const getRequestErrorMessage = (error, fallbackMessage) => {
+    const backendMessage = typeof error?.data?.message === 'string' ? error.data.message.trim() : '';
+    if (backendMessage) return backendMessage;
+    const rawResponse = typeof error?.data === 'string' ? error.data.trim() : '';
+    if (rawResponse) return rawResponse;
+    if (error?.status) return `${fallbackMessage} (HTTP ${error.status})`;
+    return fallbackMessage;
+};
+
 const NewPropertyForm = ({ token, onSuccess }) => {
     const [property, setProperty] = useState({
         property_name: '',
@@ -73,6 +82,7 @@ const NewPropertyForm = ({ token, onSuccess }) => {
     const [errorMessage, setErrorMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [snackbarMessage, setSnackbarMessage] = useState('Success!');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         apiFetch('/auth/users', {
@@ -102,8 +112,10 @@ const NewPropertyForm = ({ token, onSuccess }) => {
         setProperty((prev) => ({ ...prev, is_irrigated: event.target.checked }));
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
 
         const payload = { ...property };
 
@@ -134,34 +146,37 @@ const NewPropertyForm = ({ token, onSuccess }) => {
             delete payload.assigned_driver_id;
         }
 
-        apiFetch('/api/property', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-        })
-            .then(({ data }) => {
-                setErrorMessage('');
-                if (data.status === 'fail') {
-                    setSnackbarSeverity('error');
-                    setSnackbarMessage(data.message || 'Failed to create property.');
-                    setErrorMessage(data.message || 'Failed to create property.');
-                } else {
-                    setSnackbarSeverity('success');
-                    setSnackbarMessage('Property created successfully.');
-                    if (onSuccess) onSuccess();
-                }
-                setOpenSnackbar(true);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                setErrorMessage('Failed to create property.');
-                setSnackbarSeverity('error');
-                setSnackbarMessage('Failed to create property.');
-                setOpenSnackbar(true);
+        try {
+            const { data } = await apiFetch('/api/property', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
             });
+            setErrorMessage('');
+            if (data.status === 'fail') {
+                const failureMessage = data.message || 'Failed to create property.';
+                setSnackbarSeverity('error');
+                setSnackbarMessage(failureMessage);
+                setErrorMessage(failureMessage);
+            } else {
+                setSnackbarSeverity('success');
+                setSnackbarMessage('Property created successfully.');
+                if (onSuccess) onSuccess();
+            }
+            setOpenSnackbar(true);
+        } catch (error) {
+            console.error('Error:', error);
+            const failureMessage = getRequestErrorMessage(error, 'Failed to create property.');
+            setErrorMessage(failureMessage);
+            setSnackbarSeverity('error');
+            setSnackbarMessage(failureMessage);
+            setOpenSnackbar(true);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const labourUsers = users.filter((user) => user.role === 'labour');
@@ -326,9 +341,10 @@ const NewPropertyForm = ({ token, onSuccess }) => {
                             type="submit"
                             variant="contained"
                             fullWidth
+                            disabled={isSubmitting}
                             style={{ marginTop: 16, background: '#1a1f2e', color: '#fff', textTransform: 'none', fontWeight: 700 }}
                         >
-                            Save property
+                            {isSubmitting ? 'Saving...' : 'Save property'}
                         </Button>
                     </form>
 
